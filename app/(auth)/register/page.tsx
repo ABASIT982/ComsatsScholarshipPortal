@@ -32,7 +32,7 @@ export default function StudentSignup() {
   };
 
   return (
-    <section className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 px-6">
+    <section className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 px-6 pt-24">
       <div className="w-full max-w-sm bg-white/10 backdrop-blur-md border border-blue-400/30 rounded-2xl p-8 shadow-2xl text-white">
         <h1 className="text-3xl font-bold text-center mb-6 text-cyan-300">
           Student Sign Up
@@ -59,7 +59,7 @@ export default function StudentSignup() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your COMSATS email"
+              placeholder="Enter your email"
               className="w-full px-4 py-2 rounded-lg bg-blue-950/40 border border-blue-400/30 focus:outline-none focus:border-cyan-400 placeholder-blue-300/60 text-white"
               required
             />

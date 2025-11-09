@@ -44,7 +44,7 @@ export default function Navbar() {
             </Link>
 
             <Link
-              href="#about"
+              href="/#about"
               className="relative text-blue-100 font-medium hover:text-cyan-300 transition"
             >
               About
@@ -52,7 +52,7 @@ export default function Navbar() {
             </Link>
 
             <Link
-              href="#contact"
+              href="/contact"
               className="relative text-blue-100 font-medium hover:text-cyan-300 transition"
             >
               Contact
@@ -93,15 +93,15 @@ export default function Navbar() {
           <Link href="/" className="text-blue-100 hover:text-cyan-300">
             Home
           </Link>
-          <Link href="#about" className="text-blue-100 hover:text-cyan-300">
+          <Link href="/#about" className="text-blue-100 hover:text-cyan-300">
             About
           </Link>
-          <Link href="#contact" className="text-blue-100 hover:text-cyan-300">
+          <Link href="/contact" className="text-blue-100 hover:text-cyan-300">
             Contact
           </Link>
           <div className="flex flex-col gap-3">
             <Link
-              href="/(auth)/login"
+              href="/login"
               className="bg-gradient-to-r from-blue-500 to-cyan-400 text-white font-semibold px-6 py-2 rounded-full hover:opacity-90"
             >
               Student Login

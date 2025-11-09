@@ -29,7 +29,7 @@ export default function StudentLogin() {
         <form className="flex flex-col gap-4 text-sm" onSubmit={handleSubmit}>
           {/* Roll Number Section */}
           <div>
-            <label className="block text-blue-200 mb-1">Registration No.</label>
+            <label className="block text-blue-200 mb-1">Registration No</label>
             <div className="flex gap-2">
               <select
                 value={prefix}
