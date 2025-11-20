@@ -73,7 +73,7 @@ export default function Navbar() {
             </Link>
 
             <Link
-              href="/(admin)/dashboard"
+              href="/admin/login"
               className="border-2 border-cyan-400 text-cyan-300 px-5 py-2 rounded-full hover:bg-cyan-400 hover:text-blue-900 transition shadow"
             >
               Admin Login
@@ -157,7 +157,7 @@ export default function Navbar() {
               Student Login
             </Link>
             <Link
-              href="/(admin)/dashboard"
+              href="/admin/login"
               onClick={handleLinkClick}
               className="border-2 border-cyan-400 text-cyan-300 px-6 py-2 rounded-full hover:bg-cyan-400 hover:text-blue-900 transition"
             >
