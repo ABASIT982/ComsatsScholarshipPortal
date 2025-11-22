@@ -8,20 +8,24 @@ import Footer from "@/components/Footer";
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   
-  // Check if user is on admin panel pages (and logged in)
-  const isAdminPanel = pathname?.startsWith("/admin") && pathname !== "/admin/login";
-  const isLoggedInAsAdmin = typeof window !== 'undefined' && localStorage.getItem("admin");
+  // Hide navbar/footer for these routes
+  const hideNavbarFooter = 
+    pathname?.startsWith("/admin") || 
+    pathname?.startsWith("/student");
+  
+  // Except show navbar on admin login page
+  const showNavbar = pathname === "/admin/login";
 
   return (
     <html lang="en">
       <body className="bg-blue-950 text-white">
-        {/* Only show normal navbar if NOT on admin panel OR if on admin login page */}
-        {(!isAdminPanel || pathname === "/admin/login") && <Navbar />}
+        {/* Show navbar only if NOT on admin/student panels OR on admin login */}
+        {(showNavbar || !hideNavbarFooter) && <Navbar />}
         
         <main>{children}</main>
         
-        {/* Only show footer if NOT on admin panel */}
-        {!isAdminPanel && <Footer />}
+        {/* Hide footer on admin/student panels */}
+        {!hideNavbarFooter && <Footer />}
       </body>
     </html>
   );

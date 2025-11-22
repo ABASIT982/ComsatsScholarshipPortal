@@ -13,6 +13,8 @@ export async function POST(request: Request) {
       )
     }
 
+    console.log('🔍 Login attempt for regno:', regno)
+
     // Get student with password hash
     const { data: student, error: studentError } = await supabase
       .from('students')
@@ -21,15 +23,29 @@ export async function POST(request: Request) {
       .single()
 
     if (studentError || !student) {
+      console.log('❌ Student not found:', regno)
       return NextResponse.json(
         { error: 'Invalid registration number or password' },
         { status: 401 }
       )
     }
 
-    // Check password - bcrypt handles ALL symbols correctly
+    console.log('📦 Student found:', student.full_name)
+
+    // Check if password_hash exists
+    if (!student.password_hash) {
+      console.log('❌ No password hash found for student')
+      return NextResponse.json(
+        { error: 'Invalid registration number or password' },
+        { status: 401 }
+      )
+    }
+
+    // Check password
     const isPasswordValid = await bcrypt.compare(password, student.password_hash)
     
+    console.log('🔐 Password valid:', isPasswordValid)
+
     if (!isPasswordValid) {
       return NextResponse.json(
         { error: 'Invalid registration number or password' },
@@ -37,17 +53,20 @@ export async function POST(request: Request) {
       )
     }
 
+    // ✅ SUCCESS: Return student data including full_name
     return NextResponse.json({
       message: 'Login successful',
       user: {
         regno: student.regno,
         full_name: student.full_name,
-        level: student.level
+        level: student.level,
+        email: student.email,
+        department: student.department
       }
     })
 
   } catch (error) {
-    console.error('Login error:', error)
+    console.error('❌ Login error:', error)
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

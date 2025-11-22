@@ -37,7 +37,7 @@ export function StudentFilters({ onFiltersChange, loading = false }: StudentFilt
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by name or registration number..."
+              placeholder="Search by name or reg-no"
               value={filters.search}
               onChange={(e) => handleFilterChange('search', e.target.value)}
               className="w-full lg:w-80 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"

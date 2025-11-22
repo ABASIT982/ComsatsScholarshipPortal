@@ -41,19 +41,23 @@ export default function StudentLogin() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error);
+        setError(data.error || "Login failed");
+        setLoading(false);
         return;
       }
 
-      // Store user data
-      localStorage.setItem('user', JSON.stringify(data.user));
+      // ✅ STORE STUDENT DATA IN LOCALSTORAGE
+      localStorage.setItem('studentToken', data.user.regno);
+      localStorage.setItem('studentName', data.user.full_name);
+      localStorage.setItem('studentLevel', data.user.level);
+      localStorage.setItem('studentRegno', data.user.regno);
       localStorage.setItem('isAuthenticated', 'true');
 
-      alert("Login successful!");
-      router.push("/dashboard");
+      // Redirect to student portal
+      router.push("/student/dashboard");
+
     } catch (err) {
       setError("Network error. Please check your connection.");
-    } finally {
       setLoading(false);
     }
   };
@@ -138,6 +142,7 @@ export default function StudentLogin() {
                 type="button"
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-blue-300 hover:text-cyan-300"
                 onClick={() => setShowPassword(!showPassword)}
+                disabled={loading}
               >
                 {showPassword ? "Hide" : "Show"}
               </button>
