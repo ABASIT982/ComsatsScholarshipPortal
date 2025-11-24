@@ -59,8 +59,8 @@ export function AdminSidebar() {
         isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         
-        {/* Logo Section */}
-        <div className="flex items-center gap-4 px-6 py-6 border-b border-blue-700 shrink-0">
+        {/* Logo Section - Added margin top for mobile */}
+        <div className="flex items-center gap-4 px-6 py-6 border-b border-blue-700 shrink-0 mt-16 lg:mt-0">
           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center p-1">
             <img src="/images/comsats.jpg" 
              alt="COMSATS Logo"
