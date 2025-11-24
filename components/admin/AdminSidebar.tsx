@@ -17,6 +17,8 @@ import {
   Globe
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import Image from 'next/image'
+
 
 const menuItems = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
@@ -59,8 +61,13 @@ export function AdminSidebar() {
         
         {/* Logo Section */}
         <div className="flex items-center gap-4 px-6 py-6 border-b border-blue-700 shrink-0">
-          <div className="flex items-center justify-center w-12 h-12 bg-white/10 rounded-xl backdrop-blur-sm border border-white/20">
-            <GraduationCap className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center p-1">
+            <img src="/images/comsats.jpg" 
+             alt="COMSATS Logo"
+            width={32}
+            height={32}
+            className="rounded object-contain"
+             />
           </div>
           <div>
             <h1 className="text-xl font-bold text-white">Scholarship Portal</h1>

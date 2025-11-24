@@ -51,6 +51,7 @@ export default function StudentLogin() {
       localStorage.setItem('studentName', data.user.full_name);
       localStorage.setItem('studentLevel', data.user.level);
       localStorage.setItem('studentRegno', data.user.regno);
+      localStorage.setItem('studentEmail', data.user.email);
       localStorage.setItem('isAuthenticated', 'true');
 
       // Redirect to student portal
