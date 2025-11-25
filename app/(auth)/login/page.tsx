@@ -20,57 +20,75 @@ export default function StudentLogin() {
   const sessions = ['FA21', 'SP21','FA22','SP22','FA23', 'SP23','FA24','SP24','FA25', 'SP25','FA26','SP26',];
   const departments = ['BCS', 'BSE','BBA', 'BEC', 'BDS', 'MCS', 'MSE', 'MBA','MEC','MDS'];
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError("");
+  setLoading(true);
 
-    if (!prefix || !program || !number || !password) {
-      setError("All fields are required");
+  if (!prefix || !program || !number || !password) {
+    setError("All fields are required");
+    setLoading(false);
+    return;
+  }
+
+  const rollNumber = `${prefix}-${program}-${number}`;
+
+  try {
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ regno: rollNumber, password }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error || "Login failed");
       setLoading(false);
       return;
     }
 
-    const rollNumber = `${prefix}-${program}-${number}`;
+    // ✅ USE AUTH CONTEXT INSTEAD OF DIRECT LOCALSTORAGE
+    login({
+      name: data.user.full_name,
+      regno: data.user.regno
+    });
 
+    // ✅ STORE ADDITIONAL STUDENT DATA IN LOCALSTORAGE
+    localStorage.setItem('studentToken', data.user.regno);
+    localStorage.setItem('studentName', data.user.full_name);
+    localStorage.setItem('studentLevel', data.user.level);
+    localStorage.setItem('studentRegno', data.user.regno);
+    localStorage.setItem('studentEmail', data.user.email);
+    localStorage.setItem('isAuthenticated', 'true');
+
+    // ✅ GET USER'S PROFILE AVATAR
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ regno: rollNumber, password }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Login failed");
-        setLoading(false);
-        return;
+      const profileRes = await fetch(`/api/get-profile?regno=${data.user.regno}`);
+      if (profileRes.ok) {
+        const profileData = await profileRes.json();
+        if (profileData.avatar_url) {
+          localStorage.setItem('studentAvatar', profileData.avatar_url);
+          console.log('💾 Avatar loaded for user:', profileData.avatar_url);
+        } else {
+          // Clear any previous avatar if current user has no avatar
+          localStorage.removeItem('studentAvatar');
+          console.log('ℹ️ No avatar found for user');
+        }
       }
-
-      // ✅ USE AUTH CONTEXT INSTEAD OF DIRECT LOCALSTORAGE
-      login({
-        name: data.user.full_name,
-        regno: data.user.regno
-      });
-
-      // ✅ STORE ADDITIONAL STUDENT DATA IN LOCALSTORAGE (KEEP YOUR EXISTING LOGIC)
-      localStorage.setItem('studentToken', data.user.regno);
-      localStorage.setItem('studentName', data.user.full_name);
-      localStorage.setItem('studentLevel', data.user.level);
-      localStorage.setItem('studentRegno', data.user.regno);
-      localStorage.setItem('studentEmail', data.user.email);
-      localStorage.setItem('isAuthenticated', 'true');
-
-      // Redirect to student portal
-      router.push("/student/dashboard");
-
-    } catch (err) {
-      setError("Network error. Please check your connection.");
-      setLoading(false);
+    } catch (profileError) {
+      console.log('Could not fetch profile avatar');
+      localStorage.removeItem('studentAvatar'); // Clear on error
     }
-  };
 
+    // Redirect to student portal
+    router.push("/student/dashboard");
+
+  } catch (err) {
+    setError("Network error. Please check your connection.");
+    setLoading(false);
+  }
+};
   // REST OF YOUR CODE REMAINS EXACTLY THE SAME...
   return (
     <section className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 px-6">

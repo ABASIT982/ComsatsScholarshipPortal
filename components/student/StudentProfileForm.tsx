@@ -51,85 +51,81 @@ export function StudentProfileForm({ onComplete, user, existingData }: StudentPr
     emergency_contact_relationship: '',
     emergency_contact_phone: '',
     
-    // Step 5: Documents (files)
+    // Step 5: Documents (files) - ALL COMPULSORY
     student_cnic_front: null as File | null,
     student_cnic_back: null as File | null,
     father_cnic_front: null as File | null,
     father_cnic_back: null as File | null,
-    domicile: null as File | null,
+    student_card_front: null as File | null,
+    student_card_back: null as File | null,
   });
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [formErrors, setFormErrors] = useState<{[key: string]: string}>({});
 
   // Pre-fill data from localStorage and existingData
-  // Pre-fill data from localStorage and existingData
-useEffect(() => {
-  const studentName = localStorage.getItem('studentName') || '';
-  const studentRegno = localStorage.getItem('studentRegno') || '';
-  const studentEmail = localStorage.getItem('studentEmail') || '';
+  useEffect(() => {
+    const studentName = localStorage.getItem('studentName') || '';
+    const studentRegno = localStorage.getItem('studentRegno') || '';
+    const studentEmail = localStorage.getItem('studentEmail') || '';
 
-  console.log('📋 Fetching from localStorage:', { 
-    name: studentName, 
-    regno: studentRegno, 
-    email: studentEmail,
-  });
+    console.log('📋 Fetching from localStorage:', { 
+      name: studentName, 
+      regno: studentRegno, 
+      email: studentEmail,
+    });
 
-  console.log('📋 Existing data:', existingData);
+    console.log('📋 Existing data:', existingData);
 
-  // If we have existing data, use it to pre-fill the form
-  const initialData = existingData ? {
-    full_name: existingData.full_name || studentName,
-    regno: existingData.regno || studentRegno,
-    email: existingData.email || studentEmail,
-    phone_number: existingData.phone_number || '',
-    date_of_birth: existingData.date_of_birth || '',
-    gender: existingData.gender || '',
-    cnic_bform: existingData.cnic_bform || '',
-    nationality: existingData.nationality || '',
-    permanent_address: existingData.permanent_address || '',
-    current_address: existingData.current_address || '',
-    province_city: existingData.province_city || '',
-    has_disability: existingData.has_disability || false,
-    disability_details: existingData.disability_details || '',
-    father_name: existingData.father_name || '',
-    father_cnic: existingData.father_cnic || '',
-    father_occupation: existingData.father_occupation || '',
-    father_monthly_income: existingData.father_monthly_income || '',
-    guardian_name: existingData.guardian_name || '',
-    guardian_cnic: existingData.guardian_cnic || '',
-    guardian_occupation: existingData.guardian_occupation || '',
-    guardian_phone: existingData.guardian_phone || '',
-    household_monthly_income: existingData.household_monthly_income || '',
-    family_members: existingData.family_members || '',
-    emergency_contact_name: existingData.emergency_contact_name || '',
-    emergency_contact_relationship: existingData.emergency_contact_relationship || '',
-    emergency_contact_phone: existingData.emergency_contact_phone || '',
-  } : {
-    email: studentEmail,
-    full_name: studentName,
-    regno: studentRegno,
-    // ... other fields remain empty
-  };
+    const initialData = existingData ? {
+      full_name: existingData.full_name || studentName,
+      regno: existingData.regno || studentRegno,
+      email: existingData.email || studentEmail,
+      phone_number: existingData.phone_number || '',
+      date_of_birth: existingData.date_of_birth || '',
+      gender: existingData.gender || '',
+      cnic_bform: existingData.cnic_bform || '',
+      nationality: existingData.nationality || '',
+      permanent_address: existingData.permanent_address || '',
+      current_address: existingData.current_address || '',
+      province_city: existingData.province_city || '',
+      has_disability: existingData.has_disability || false,
+      disability_details: existingData.disability_details || '',
+      father_name: existingData.father_name || '',
+      father_cnic: existingData.father_cnic || '',
+      father_occupation: existingData.father_occupation || '',
+      father_monthly_income: existingData.father_monthly_income || '',
+      guardian_name: existingData.guardian_name || '',
+      guardian_cnic: existingData.guardian_cnic || '',
+      guardian_occupation: existingData.guardian_occupation || '',
+      guardian_phone: existingData.guardian_phone || '',
+      household_monthly_income: existingData.household_monthly_income || '',
+      family_members: existingData.family_members || '',
+      emergency_contact_name: existingData.emergency_contact_name || '',
+      emergency_contact_relationship: existingData.emergency_contact_relationship || '',
+      emergency_contact_phone: existingData.emergency_contact_phone || '',
+    } : {
+      email: studentEmail,
+      full_name: studentName,
+      regno: studentRegno,
+    };
 
-  setFormData(prev => ({
-    ...prev,
-    ...initialData
-  }));
-
-  // Fallback to user metadata
-  if (user && (!studentName || !studentRegno)) {
-    console.log('🔄 Falling back to user metadata');
     setFormData(prev => ({
       ...prev,
-      email: user.email || prev.email,
-      full_name: user.user_metadata?.full_name || prev.full_name,
-      regno: user.user_metadata?.registration_number || prev.regno
+      ...initialData
     }));
-  }
-}, [user, existingData || null]); // FIXED: Provide default value
 
-  // Rest of your code remains exactly the same...
+    if (user && (!studentName || !studentRegno)) {
+      console.log('🔄 Falling back to user metadata');
+      setFormData(prev => ({
+        ...prev,
+        email: user.email || prev.email,
+        full_name: user.user_metadata?.full_name || prev.full_name,
+        regno: user.user_metadata?.registration_number || prev.regno
+      }));
+    }
+  }, [user, existingData]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
@@ -137,7 +133,6 @@ useEffect(() => {
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
     
-    // Clear error when user starts typing
     if (formErrors[name]) {
       setFormErrors(prev => ({
         ...prev,
@@ -155,7 +150,7 @@ useEffect(() => {
     }
   };
 
-  // Validation functions (same as before)
+  // Validation functions - Step 1-4 remain the same
   const validateStep1 = () => {
     const errors: {[key: string]: string} = {};
     
@@ -165,12 +160,10 @@ useEffect(() => {
     if (!formData.cnic_bform.trim()) errors.cnic_bform = 'CNIC/B-Form is required';
     if (!formData.nationality.trim()) errors.nationality = 'Nationality is required';
     
-    // CNIC validation
     if (formData.cnic_bform && !/^\d{5}-\d{7}-\d{1}$/.test(formData.cnic_bform)) {
       errors.cnic_bform = 'CNIC must be in format: XXXXX-XXXXXXX-X';
     }
     
-    // Phone validation
     if (formData.phone_number && !/^03\d{2}-\d{7}$/.test(formData.phone_number)) {
       errors.phone_number = 'Phone must be in format: 03XX-XXXXXXX';
     }
@@ -198,7 +191,6 @@ useEffect(() => {
     if (!formData.household_monthly_income) errors.household_monthly_income = 'Household monthly income is required';
     if (!formData.family_members) errors.family_members = 'Number of family members is required';
     
-    // Father CNIC validation
     if (formData.father_cnic && !/^\d{5}-\d{7}-\d{1}$/.test(formData.father_cnic)) {
       errors.father_cnic = 'CNIC must be in format: XXXXX-XXXXXXX-X';
     }
@@ -213,7 +205,6 @@ useEffect(() => {
     if (!formData.emergency_contact_relationship.trim()) errors.emergency_contact_relationship = 'Relationship is required';
     if (!formData.emergency_contact_phone.trim()) errors.emergency_contact_phone = 'Emergency contact phone is required';
     
-    // Phone validation
     if (formData.emergency_contact_phone && !/^03\d{2}-\d{7}$/.test(formData.emergency_contact_phone)) {
       errors.emergency_contact_phone = 'Phone must be in format: 03XX-XXXXXXX';
     }
@@ -221,15 +212,16 @@ useEffect(() => {
     return errors;
   };
 
+  // UPDATED: ALL DOCUMENTS ARE COMPULSORY
   const validateStep5 = () => {
     const errors: {[key: string]: string} = {};
     
-    // Make file uploads optional for now to test database storage
-    // if (!formData.student_cnic_front) errors.student_cnic_front = 'Student CNIC front is required';
-    // if (!formData.student_cnic_back) errors.student_cnic_back = 'Student CNIC back is required';
-    // if (!formData.father_cnic_front) errors.father_cnic_front = "Father's CNIC front is required";
-    // if (!formData.father_cnic_back) errors.father_cnic_back = "Father's CNIC back is required";
-    // if (!formData.domicile) errors.domicile = 'Domicile certificate is required';
+    if (!formData.student_cnic_front) errors.student_cnic_front = 'Student CNIC front is required';
+    if (!formData.student_cnic_back) errors.student_cnic_back = 'Student CNIC back is required';
+    if (!formData.father_cnic_front) errors.father_cnic_front = "Father's CNIC front is required";
+    if (!formData.father_cnic_back) errors.father_cnic_back = "Father's CNIC back is required";
+    if (!formData.student_card_front) errors.student_card_front = 'Student card front is required';
+    if (!formData.student_card_back) errors.student_card_back = 'Student card back is required';
     
     return errors;
   };
@@ -257,7 +249,6 @@ useEffect(() => {
     
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      // Scroll to first error
       const firstError = Object.keys(errors)[0];
       const element = document.querySelector(`[name="${firstError}"]`);
       if (element) {
@@ -266,7 +257,6 @@ useEffect(() => {
       return;
     }
     
-    // Clear errors if validation passes
     setFormErrors({});
     setCurrentStep(prev => prev + 1);
     window.scrollTo(0, 0);
@@ -279,80 +269,133 @@ useEffect(() => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  console.log('🚀 Starting form submission...');
-  
-  // Validate final step
-  const errors = validateStep5();
-  if (Object.keys(errors).length > 0) {
-    setFormErrors(errors);
-    return;
-  }
-  
-  setLoading(true);
-
-  try {
-    console.log('💾 Starting to save data to database...');
+    e.preventDefault();
     
-    // Prepare data for database
-    const dbData = {
-      regno: formData.regno,
-      full_name: formData.full_name,
-      email: formData.email,
-      phone_number: formData.phone_number,
-      date_of_birth: formData.date_of_birth,
-      gender: formData.gender,
-      cnic_bform: formData.cnic_bform,
-      nationality: formData.nationality,
-      permanent_address: formData.permanent_address,
-      current_address: formData.current_address,
-      province_city: formData.province_city,
-      has_disability: formData.has_disability,
-      disability_details: formData.disability_details || '',
-      father_name: formData.father_name,
-      father_cnic: formData.father_cnic,
-      father_occupation: formData.father_occupation,
-      father_monthly_income: formData.father_monthly_income ? parseFloat(formData.father_monthly_income) : 0,
-      guardian_name: formData.guardian_name || '',
-      guardian_cnic: formData.guardian_cnic || '',
-      guardian_occupation: formData.guardian_occupation || '',
-      guardian_phone: formData.guardian_phone || '',
-      household_monthly_income: formData.household_monthly_income ? parseFloat(formData.household_monthly_income) : 0,
-      family_members: formData.family_members ? parseInt(formData.family_members) : 0,
-      emergency_contact_name: formData.emergency_contact_name,
-      emergency_contact_relationship: formData.emergency_contact_relationship,
-      emergency_contact_phone: formData.emergency_contact_phone,
-      profile_completed: true, // MAKE SURE THIS IS TRUE
-      updated_at: new Date().toISOString()
-    };
-
-    console.log('📦 Data to save - profile_completed:', dbData.profile_completed);
-    console.log('📦 Full data:', dbData);
-
-    const { data, error } = await supabase
-      .from('profiles')
-      .upsert(dbData, { onConflict: 'regno' })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('❌ Database error:', error);
-      throw new Error(`Database error: ${error.message}`);
+    console.log('🚀 Starting form submission...');
+    
+    // Validate final step - ALL DOCUMENTS REQUIRED
+    const errors = validateStep5();
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      return;
     }
     
-    console.log('✅ Profile saved successfully:', data);
-    console.log('✅ Profile completed status:', data.profile_completed);
-    alert('🎉 Profile saved successfully!');
-    onComplete(data);
-    
-  } catch (error: any) {
-    console.error('❌ Error saving profile:', error);
-    alert(`Error: ${error.message}`);
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+
+    try {
+      console.log('💾 Starting to save data to database...');
+      
+      // Upload files to your API route
+      const uploadFile = async (file: File, type: string): Promise<string> => {
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', file);
+        uploadFormData.append('type', type);
+        uploadFormData.append('regno', formData.regno);
+
+        console.log(`📤 Uploading ${type} for regno: ${formData.regno}`);
+
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to upload ${type}`);
+        }
+
+        const result = await response.json();
+        console.log(`✅ ${type} uploaded:`, result.url);
+        return result.url;
+      };
+
+      // Upload avatar if exists (optional)
+      let avatarUrl = null;
+      if (avatarFile) {
+        avatarUrl = await uploadFile(avatarFile, 'avatar');
+      }
+
+      // Upload ALL COMPULSORY documents
+      const [
+        studentCnicFrontUrl,
+        studentCnicBackUrl,
+        fatherCnicFrontUrl,
+        fatherCnicBackUrl,
+        studentCardFrontUrl,
+        studentCardBackUrl
+      ] = await Promise.all([
+        uploadFile(formData.student_cnic_front!, 'student_cnic_front'),
+        uploadFile(formData.student_cnic_back!, 'student_cnic_back'),
+        uploadFile(formData.father_cnic_front!, 'father_cnic_front'),
+        uploadFile(formData.father_cnic_back!, 'father_cnic_back'),
+        uploadFile(formData.student_card_front!, 'student_card_front'),
+        uploadFile(formData.student_card_back!, 'student_card_back')
+      ]);
+
+      // Prepare data for database
+      const dbData = {
+        regno: formData.regno,
+        full_name: formData.full_name,
+        email: formData.email,
+        phone_number: formData.phone_number,
+        date_of_birth: formData.date_of_birth,
+        gender: formData.gender,
+        cnic_bform: formData.cnic_bform,
+        nationality: formData.nationality,
+        permanent_address: formData.permanent_address,
+        current_address: formData.current_address,
+        province_city: formData.province_city,
+        has_disability: formData.has_disability,
+        disability_details: formData.disability_details || '',
+        father_name: formData.father_name,
+        father_cnic: formData.father_cnic,
+        father_occupation: formData.father_occupation,
+        father_monthly_income: formData.father_monthly_income ? parseFloat(formData.father_monthly_income) : 0,
+        guardian_name: formData.guardian_name || '',
+        guardian_cnic: formData.guardian_cnic || '',
+        guardian_occupation: formData.guardian_occupation || '',
+        guardian_phone: formData.guardian_phone || '',
+        household_monthly_income: formData.household_monthly_income ? parseFloat(formData.household_monthly_income) : 0,
+        family_members: formData.family_members ? parseInt(formData.family_members) : 0,
+        emergency_contact_name: formData.emergency_contact_name,
+        emergency_contact_relationship: formData.emergency_contact_relationship,
+        emergency_contact_phone: formData.emergency_contact_phone,
+        // Document URLs - ALL COMPULSORY
+        avatar_url: avatarUrl,
+        student_cnic_front_url: studentCnicFrontUrl,
+        student_cnic_back_url: studentCnicBackUrl,
+        father_cnic_front_url: fatherCnicFrontUrl,
+        father_cnic_back_url: fatherCnicBackUrl,
+        student_card_front_url: studentCardFrontUrl,
+        student_card_back_url: studentCardBackUrl,
+        profile_completed: true,
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('📦 Data to save:', dbData);
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert(dbData, { onConflict: 'regno' })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Database error:', error);
+        throw new Error(`Database error: ${error.message}`);
+      }
+      
+      console.log('✅ Profile saved successfully:', data);
+      alert('🎉 Profile completed successfully!');
+      onComplete(data);
+      
+    } catch (error: any) {
+      console.error('❌ Error saving profile:', error);
+      alert(`Error: ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const steps = [
     { number: 1, title: 'Personal Information', completed: currentStep > 1 },
@@ -401,8 +444,9 @@ useEffect(() => {
           ></div>
         </div>
       </div>
-<form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
-        {/* Step 1: Personal Information */}
+
+      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow-md">
+                {/* Step 1: Personal Information */}
         {currentStep === 1 && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Personal Information</h2>
@@ -884,13 +928,16 @@ useEffect(() => {
           </div>
         )}
 
-        {/* Step 5: Document Uploads */}
+        {/* Step 5: Document Uploads - ALL COMPULSORY */}
         {currentStep === 5 && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Document Uploads</h2>
-            <p className="text-gray-600 mb-6">Please upload clear scanned copies of the following documents (PDF, JPG, PNG, max 5MB each)</p>
+            <p className="text-red-600 mb-6 font-semibold">
+              ⚠️ ALL DOCUMENTS ARE COMPULSORY. Please upload clear scanned copies (PDF, JPG, PNG, max 10MB each)
+            </p>
             
             <div className="grid grid-cols-1 gap-6">
+              {/* Student CNIC/B-Form */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Student CNIC / B-Form (Front) *
@@ -900,6 +947,7 @@ useEffect(() => {
                   accept=".pdf,.jpg,.jpeg,.png"
                   onChange={(e) => handleFileChange(e, 'student_cnic_front')}
                   className="w-full"
+                  required
                 />
                 {formData.student_cnic_front && (
                   <p className="text-sm text-green-600 mt-1">Selected: {formData.student_cnic_front.name}</p>
@@ -918,6 +966,7 @@ useEffect(() => {
                   accept=".pdf,.jpg,.jpeg,.png"
                   onChange={(e) => handleFileChange(e, 'student_cnic_back')}
                   className="w-full"
+                  required
                 />
                 {formData.student_cnic_back && (
                   <p className="text-sm text-green-600 mt-1">Selected: {formData.student_cnic_back.name}</p>
@@ -927,6 +976,7 @@ useEffect(() => {
                 )}
               </div>
 
+              {/* Father CNIC */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Father/Guardian CNIC (Front) *
@@ -936,6 +986,7 @@ useEffect(() => {
                   accept=".pdf,.jpg,.jpeg,.png"
                   onChange={(e) => handleFileChange(e, 'father_cnic_front')}
                   className="w-full"
+                  required
                 />
                 {formData.father_cnic_front && (
                   <p className="text-sm text-green-600 mt-1">Selected: {formData.father_cnic_front.name}</p>
@@ -954,6 +1005,7 @@ useEffect(() => {
                   accept=".pdf,.jpg,.jpeg,.png"
                   onChange={(e) => handleFileChange(e, 'father_cnic_back')}
                   className="w-full"
+                  required
                 />
                 {formData.father_cnic_back && (
                   <p className="text-sm text-green-600 mt-1">Selected: {formData.father_cnic_back.name}</p>
@@ -963,21 +1015,42 @@ useEffect(() => {
                 )}
               </div>
 
+              {/* Student Card */}
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Domicile Certificate *
+                  Student Card (Front) *
                 </label>
                 <input
                   type="file"
                   accept=".pdf,.jpg,.jpeg,.png"
-                  onChange={(e) => handleFileChange(e, 'domicile')}
+                  onChange={(e) => handleFileChange(e, 'student_card_front')}
                   className="w-full"
+                  required
                 />
-                {formData.domicile && (
-                  <p className="text-sm text-green-600 mt-1">Selected: {formData.domicile.name}</p>
+                {formData.student_card_front && (
+                  <p className="text-sm text-green-600 mt-1">Selected: {formData.student_card_front.name}</p>
                 )}
-                {formErrors.domicile && (
-                  <p className="text-red-500 text-xs mt-1">{formErrors.domicile}</p>
+                {formErrors.student_card_front && (
+                  <p className="text-red-500 text-xs mt-1">{formErrors.student_card_front}</p>
+                )}
+              </div>
+
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Student Card (Back) *
+                </label>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(e) => handleFileChange(e, 'student_card_back')}
+                  className="w-full"
+                  required
+                />
+                {formData.student_card_back && (
+                  <p className="text-sm text-green-600 mt-1">Selected: {formData.student_card_back.name}</p>
+                )}
+                {formErrors.student_card_back && (
+                  <p className="text-red-500 text-xs mt-1">{formErrors.student_card_back}</p>
                 )}
               </div>
             </div>
@@ -1009,7 +1082,7 @@ useEffect(() => {
               disabled={loading}
               className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50"
             >
-              {loading ? 'Saving... ': 'Complete Profile'}
+              {loading ? 'Saving... ' : 'Complete Profile'}
             </button>
           )}
         </div>
