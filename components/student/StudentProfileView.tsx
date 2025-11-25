@@ -8,7 +8,7 @@ const supabase = createClient(
 );
 
 interface StudentProfileViewProps {
-  user: any;
+  user?: any;
   profileData?: any;
 }
 
@@ -48,35 +48,128 @@ interface ProfileData {
 export function StudentProfileView({ user, profileData }: StudentProfileViewProps) {
   const [profile, setProfile] = useState<ProfileData | null>(profileData || null);
   const [loading, setLoading] = useState(!profileData);
+  const [userRegno, setUserRegno] = useState<string | null>(null);
 
+  // Get regno from localStorage and fetch profile
   useEffect(() => {
-    if (profileData) {
-      setProfile(profileData);
-      setLoading(false);
-      return;
+    const regno = localStorage.getItem('studentRegno');
+    console.log('📝 Retrieved regno from localStorage:', regno);
+    setUserRegno(regno);
+    
+    if (regno && !profileData) {
+      fetchProfile(regno);
     }
+  }, []);
 
-    if (user) {
-      fetchProfile();
+  // Auto-refresh when user changes (logout/login)
+  useEffect(() => {
+    if (userRegno) {
+      console.log('🔄 User regno changed, fetching fresh data...');
+      fetchProfile(userRegno);
     }
-  }, [user, profileData]);
+  }, [userRegno]);
 
-  const fetchProfile = async () => {
+  const fetchProfile = async (regno: string) => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
+      setLoading(true);
+      
+      console.log('🔄 Fetching profile for regno:', regno);
+
+      // Get basic info from students table
+      const { data: studentData, error: studentError } = await supabase
+        .from('students')
+        .select('regno, full_name, email, level')
+        .eq('regno', regno)
         .single();
 
-      if (error) throw error;
-      setProfile(data);
+      if (studentError) {
+        console.error('❌ Error fetching from students table:', studentError);
+      }
+
+      console.log('📊 Student data:', studentData);
+
+      // Get detailed profile data from profiles table
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('regno', regno)
+        .single();
+
+      if (profileError) {
+        console.error('❌ Error fetching from profiles table:', profileError);
+        
+        // If no profile exists but we have student data, create basic profile
+        if (studentData) {
+          const basicProfile: ProfileData = {
+            id: user?.id || '',
+            regno: studentData.regno,
+            full_name: studentData.full_name,
+            email: studentData.email,
+            phone_number: '',
+            date_of_birth: '',
+            gender: '',
+            cnic_bform: '',
+            nationality: '',
+            permanent_address: '',
+            current_address: '',
+            province_city: '',
+            has_disability: false,
+            disability_details: '',
+            father_name: '',
+            father_cnic: '',
+            father_occupation: '',
+            father_monthly_income: 0,
+            guardian_name: '',
+            guardian_cnic: '',
+            guardian_occupation: '',
+            guardian_phone: '',
+            household_monthly_income: 0,
+            family_members: 0,
+            emergency_contact_name: '',
+            emergency_contact_relationship: '',
+            emergency_contact_phone: '',
+            avatar_url: '',
+            profile_completed: false,
+            created_at: new Date().toISOString()
+          };
+          setProfile(basicProfile);
+          return;
+        }
+        
+        setProfile(null);
+        return;
+      }
+
+      console.log('📋 Profile data:', profileData);
+
+      // Merge the data, prioritizing students table for basic info
+      const mergedProfile: ProfileData = {
+        ...profileData,
+        ...(studentData && {
+          full_name: studentData.full_name,
+          email: studentData.email,
+          regno: studentData.regno
+        })
+      };
+
+      console.log('🎯 Merged profile:', mergedProfile);
+      setProfile(mergedProfile);
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('❌ Error fetching profile:', error);
+      setProfile(null);
     } finally {
       setLoading(false);
     }
   };
+
+  // Show loading while getting regno
+  if (!userRegno && !profileData) {
+    return (
+      <div className="flex justify-center items-center min-h-48">
+        <div className="text-lg">Loading user data...</div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -89,12 +182,12 @@ export function StudentProfileView({ user, profileData }: StudentProfileViewProp
   if (!profile) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">No profile data found.</p>
+        <p className="text-gray-500">No profile data found for {userRegno}.</p>
         <button 
           onClick={() => window.location.reload()}
           className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
         >
-          Refresh
+          Reload Page
         </button>
       </div>
     );
@@ -121,12 +214,13 @@ export function StudentProfileView({ user, profileData }: StudentProfileViewProp
 
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-md overflow-hidden">
+      {/* Clean header without refresh button */}
       <div className="bg-green-500 text-white p-4 text-center">
         <div className="flex items-center justify-center space-x-2">
           <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
           </svg>
-          <span className="font-semibold">Profile Completed Successfully!</span>
+          <span className="font-semibold">Profile {profile.profile_completed ? 'Completed' : 'Incomplete'}!</span>
         </div>
       </div>
 
@@ -203,7 +297,7 @@ export function StudentProfileView({ user, profileData }: StudentProfileViewProp
         </section>
       </div>
 
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-4">
+      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end">
         <button
           onClick={() => window.print()}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
