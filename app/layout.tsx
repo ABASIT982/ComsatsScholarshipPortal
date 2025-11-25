@@ -3,7 +3,8 @@
 import { usePathname } from "next/navigation";
 import "./globals.css";
 import Navbar from "../components/Navbar";
-import Footer from "@/components/Footer";
+import Footer from "../components/Footer";
+import { AuthProvider } from './contexts/AuthContext'; // FIXED PATH
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -19,13 +20,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className="bg-blue-950 text-white">
-        {/* Show navbar only if NOT on admin/student panels OR on admin login */}
-        {(showNavbar || !hideNavbarFooter) && <Navbar />}
-        
-        <main>{children}</main>
-        
-        {/* Hide footer on admin/student panels */}
-        {!hideNavbarFooter && <Footer />}
+        {/* WRAP EVERYTHING WITH AuthProvider */}
+        <AuthProvider>
+          {/* Show navbar only if NOT on admin/student panels OR on admin login */}
+          {(showNavbar || !hideNavbarFooter) && <Navbar />}
+          
+          <main>{children}</main>
+          
+          {/* Hide footer on admin/student panels */}
+          {!hideNavbarFooter && <Footer />}
+        </AuthProvider>
       </body>
     </html>
   );

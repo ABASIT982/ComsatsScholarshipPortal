@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function AdminLogin() {
   const [email, setEmail] = useState("");
@@ -11,6 +12,7 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const { login } = useAuth();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +39,14 @@ export default function AdminLogin() {
         return;
       }
 
-      // Store admin data and redirect
+      // ✅ USE AUTH CONTEXT FOR LOGIN
+      login({
+        name: data.admin?.name || 'Administrator',
+        regno: 'admin',
+        token: data.token
+      });
+
+      // ✅ STORE ADDITIONAL ADMIN DATA (KEEP YOUR EXISTING LOGIC)
       localStorage.setItem("adminToken", data.token);
       localStorage.setItem("admin", JSON.stringify(data.admin));
       
@@ -50,6 +59,7 @@ export default function AdminLogin() {
     }
   };
 
+  // REST OF YOUR CODE REMAINS EXACTLY THE SAME...
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">

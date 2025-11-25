@@ -2,17 +2,15 @@
 import { Bell, User, Settings, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '../../app/contexts/AuthContext'
 
 export function AdminHeader() {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const router = useRouter()
+  const { logout } = useAuth()
 
   const handleSignOut = () => {
-    // Clear admin authentication
-    localStorage.removeItem('adminToken')
-    sessionStorage.removeItem('adminAuth')
-    
-    // Redirect to admin login page
+    logout();
     router.push('/admin/login')
   }
 

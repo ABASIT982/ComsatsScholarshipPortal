@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from '../../contexts/AuthContext' // CORRECT PATH
 
 export default function StudentLogin() {
   const [prefix, setPrefix] = useState("");
@@ -13,6 +14,7 @@ export default function StudentLogin() {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const router = useRouter();
+  const { login } = useAuth();
 
   // Manual sessions and departments
   const sessions = ['FA21', 'SP21','FA22','SP22','FA23', 'SP23','FA24','SP24','FA25', 'SP25','FA26','SP26',];
@@ -46,7 +48,13 @@ export default function StudentLogin() {
         return;
       }
 
-      // ✅ STORE STUDENT DATA IN LOCALSTORAGE
+      // ✅ USE AUTH CONTEXT INSTEAD OF DIRECT LOCALSTORAGE
+      login({
+        name: data.user.full_name,
+        regno: data.user.regno
+      });
+
+      // ✅ STORE ADDITIONAL STUDENT DATA IN LOCALSTORAGE (KEEP YOUR EXISTING LOGIC)
       localStorage.setItem('studentToken', data.user.regno);
       localStorage.setItem('studentName', data.user.full_name);
       localStorage.setItem('studentLevel', data.user.level);
@@ -63,6 +71,7 @@ export default function StudentLogin() {
     }
   };
 
+  // REST OF YOUR CODE REMAINS EXACTLY THE SAME...
   return (
     <section className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 px-6">
       <div className="w-full max-w-sm bg-white/10 backdrop-blur-md border border-blue-400/30 rounded-2xl p-8 shadow-2xl text-white">

@@ -18,7 +18,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
-
+import { useAuth } from '../../app/contexts/AuthContext'
 
 const menuItems = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
@@ -33,13 +33,10 @@ export function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const { logout } = useAuth()
 
   const handleSignOut = () => {
-    // Clear admin authentication
-    localStorage.removeItem('adminToken')
-    sessionStorage.removeItem('adminAuth')
-    
-    // Redirect to admin login page
+    logout();
     router.push('/admin/login')
   }
 

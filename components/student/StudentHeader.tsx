@@ -2,11 +2,13 @@
 import { Bell, User, Settings, LogOut } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '../../app/contexts/AuthContext' // CORRECT PATH
 
 export function StudentHeader() {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const [studentName, setStudentName] = useState('Student')
   const router = useRouter()
+  const { logout } = useAuth()
 
   // Get student name from localStorage
   useEffect(() => {
@@ -16,15 +18,11 @@ export function StudentHeader() {
   }, [])
 
   const handleSignOut = () => {
-    // Clear all student data
-    localStorage.removeItem('studentToken')
-    localStorage.removeItem('studentName')
-    localStorage.removeItem('studentLevel')
-    localStorage.removeItem('studentRegno')
-    localStorage.removeItem('isAuthenticated')
+    logout();
     router.push('/login')
   }
 
+  // REST OF YOUR CODE REMAINS EXACTLY THE SAME...
   return (
     <header className="w-full bg-white/90 backdrop-blur-md border-b border-gray-200/80 px-4 lg:px-6 py-3 lg:py-4">
       <div className="flex items-center justify-between">
