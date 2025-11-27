@@ -69,36 +69,48 @@ const fetchScholarship = async () => {
   }
 };
 
-  const checkApplicationStatus = async () => {
-    try {
-      const studentRegno = localStorage.getItem('studentRegno');
+const checkApplicationStatus = async () => {
+  try {
+    const studentRegno = localStorage.getItem('studentRegno');
+    
+    if (!studentRegno) {
+      console.log('❌ No student registration number found');
+      // Use student-specific localStorage key
+      const appliedKey = `appliedScholarships_${studentRegno}`;
+      const appliedScholarships = JSON.parse(localStorage.getItem(appliedKey) || '[]');
+      setHasApplied(appliedScholarships.includes(scholarshipId));
+      return;
+    }
+    
+    // Use the correct API endpoint to check for specific scholarship
+    const response = await fetch(`/api/applications?student_regno=${studentRegno}`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Application check response:', data);
       
-      if (!studentRegno) {
-        console.log('❌ No student registration number found');
-        const appliedScholarships = JSON.parse(localStorage.getItem('appliedScholarships') || '[]');
-        setHasApplied(appliedScholarships.includes(scholarshipId));
-        return;
-      }
-      
-      const response = await fetch(
-        `/api/applications?student_regno=${studentRegno}&scholarship_id=${scholarshipId}`
+      // Check if this specific scholarship is in the applied list
+      const hasAppliedToThis = data.applications?.some((app: any) => 
+        app.scholarship_id === scholarshipId
       );
       
-      if (response.ok) {
-        const data = await response.json();
-        setHasApplied(data.hasApplied);
-      } else {
-        // Fallback to localStorage
-        const appliedScholarships = JSON.parse(localStorage.getItem('appliedScholarships') || '[]');
-        setHasApplied(appliedScholarships.includes(scholarshipId));
-      }
-    } catch (error) {
-      console.log('Error checking application status:', error);
-      // Fallback to localStorage
-      const appliedScholarships = JSON.parse(localStorage.getItem('appliedScholarships') || '[]');
+      setHasApplied(!!hasAppliedToThis);
+    } else {
+      // Fallback to student-specific localStorage
+      const appliedKey = `appliedScholarships_${studentRegno}`;
+      const appliedScholarships = JSON.parse(localStorage.getItem(appliedKey) || '[]');
+      console.log('📦 Fallback check - Applied scholarships:', appliedScholarships);
       setHasApplied(appliedScholarships.includes(scholarshipId));
     }
-  };
+  } catch (error) {
+    console.log('❌ Error checking application status:', error);
+    // Fallback to student-specific localStorage
+    const studentRegno = localStorage.getItem('studentRegno');
+    const appliedKey = `appliedScholarships_${studentRegno}`;
+    const appliedScholarships = JSON.parse(localStorage.getItem(appliedKey) || '[]');
+    setHasApplied(appliedScholarships.includes(scholarshipId));
+  }
+};
 
   const handleApply = () => {
     setShowApplyForm(true);

@@ -1,6 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Clock, Search } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Search, Eye, FileText, Users, Award } from 'lucide-react';
+import Link from 'next/link';
 
 interface Application {
   id: string;
@@ -9,60 +10,118 @@ interface Application {
   status: 'pending' | 'approved' | 'rejected';
   applied_at: string;
   notes?: string;
+  application_data?: any;
   scholarship?: {
     title: string;
   };
-  student?: {
-    full_name: string;
-    email: string;
-  };
+  student_name?: string;
 }
 
 export default function AdminApplicationsPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  // Mock data for demo - in real app, fetch from API
+  // Fetch real applications from API
   useEffect(() => {
-    const mockApplications: Application[] = [
-      {
-        id: 'app-1',
-        scholarship_id: '1',
-        student_regno: 'FA22-BCS-001',
-        status: 'pending',
-        applied_at: new Date().toISOString(),
-        scholarship: { title: 'Merit-Based Scholarship 2024' },
-        student: { full_name: 'Ali Ahmed', email: 'ali@edu.pk' }
-      },
-      {
-        id: 'app-2',
-        scholarship_id: '1',
-        student_regno: 'FA22-BSE-002',
-        status: 'approved',
-        applied_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-        scholarship: { title: 'Merit-Based Scholarship 2024' },
-        student: { full_name: 'Sara Khan', email: 'sara@edu.pk' }
-      }
-    ];
-
-    setApplications(mockApplications);
-    setLoading(false);
+    fetchApplications();
   }, []);
 
-  const updateApplicationStatus = async (applicationId: string, newStatus: 'approved' | 'rejected') => {
-    // In real app, call API to update status
-    setApplications(prev => prev.map(app => 
-      app.id === applicationId ? { ...app, status: newStatus } : app
-    ));
-    alert(`Application ${newStatus} successfully!`);
+  const fetchApplications = async () => {
+    try {
+      console.log('🔄 Fetching applications from API...');
+      const response = await fetch('/api/admin/applications');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch applications');
+      }
+      
+      const data = await response.json();
+      console.log('✅ Applications data:', data);
+      
+      setApplications(data.applications || []);
+    } catch (error) {
+      console.error('❌ Error fetching applications:', error);
+      // Fallback to localStorage data if API fails
+      const fallbackData = getFallbackApplications();
+      setApplications(fallbackData);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filteredApplications = applications.filter(app =>
-    app.student_regno.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    app.student?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    app.scholarship?.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Fallback function to get applications from localStorage
+  const getFallbackApplications = (): Application[] => {
+    try {
+      // Get all student application keys from localStorage
+      const allKeys = Object.keys(localStorage);
+      const applicationKeys = allKeys.filter(key => key.startsWith('appliedScholarships_'));
+      
+      const fallbackApplications: Application[] = [];
+      
+      applicationKeys.forEach(key => {
+        const studentRegno = key.replace('appliedScholarships_', '');
+        const scholarshipIds = JSON.parse(localStorage.getItem(key) || '[]');
+        
+        scholarshipIds.forEach((scholarshipId: string, index: number) => {
+          fallbackApplications.push({
+            id: `fallback-${studentRegno}-${scholarshipId}`,
+            scholarship_id: scholarshipId,
+            student_regno: studentRegno,
+            status: 'pending',
+            applied_at: new Date().toISOString(),
+            scholarship: { title: `Scholarship ${scholarshipId.slice(0, 8)}` },
+            student_name: localStorage.getItem('studentName') || 'Student'
+          });
+        });
+      });
+      
+      return fallbackApplications;
+    } catch (error) {
+      console.error('Error getting fallback applications:', error);
+      return [];
+    }
+  };
+
+  const updateApplicationStatus = async (applicationId: string, newStatus: 'approved' | 'rejected') => {
+    try {
+      console.log('🔄 Updating application status:', applicationId, newStatus);
+      
+      const response = await fetch(`/api/admin/applications/${applicationId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (response.ok) {
+        // Update local state
+        setApplications(prev => prev.map(app => 
+          app.id === applicationId ? { ...app, status: newStatus } : app
+        ));
+        alert(`Application ${newStatus} successfully!`);
+      } else {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to update application');
+      }
+    } catch (error: any) {
+      console.error('❌ Error updating application:', error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const filteredApplications = applications.filter(app => {
+    const matchesSearch = 
+      app.student_regno.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.student_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      app.scholarship?.title.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || app.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -115,17 +174,101 @@ export default function AdminApplicationsPage() {
           <p className="text-gray-600 mt-2">Review and manage all scholarship applications</p>
         </div>
 
-        {/* Search */}
+        {/* Statistics Cards - MOVED TO TOP */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-100 p-3 rounded-lg">
+                <FileText className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{applications.length}</div>
+                <div className="text-sm text-gray-600">Total Applications</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="bg-yellow-100 p-3 rounded-lg">
+                <Clock className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {applications.filter(app => app.status === 'pending').length}
+                </div>
+                <div className="text-sm text-gray-600">Pending</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="bg-green-100 p-3 rounded-lg">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {applications.filter(app => app.status === 'approved').length}
+                </div>
+                <div className="text-sm text-gray-600">Approved</div>
+              </div>
+            </div>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="bg-red-100 p-3 rounded-lg">
+                <XCircle className="w-6 h-6 text-red-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {applications.filter(app => app.status === 'rejected').length}
+                </div>
+                <div className="text-sm text-gray-600">Rejected</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search and Filters */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search by student name, regno, or scholarship..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            />
+          <div className="flex flex-col md:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1">
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search by student name, regno, or scholarship..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
+            
+            {/* Status Filter */}
+            <div className="flex gap-2 items-center">
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">All Status</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
+            
+            {/* Refresh Button */}
+            <button
+              onClick={fetchApplications}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Refresh
+            </button>
           </div>
         </div>
 
@@ -133,21 +276,21 @@ export default function AdminApplicationsPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gradient-to-r from-blue-600 to-blue-700">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider">
                     Student
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider">
                     Scholarship
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider">
                     Applied
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider">
                     Actions
                   </th>
                 </tr>
@@ -156,7 +299,7 @@ export default function AdminApplicationsPage() {
                 {filteredApplications.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                      No applications found
+                      {applications.length === 0 ? 'No applications found' : 'No applications match your filters'}
                     </td>
                   </tr>
                 ) : (
@@ -165,19 +308,16 @@ export default function AdminApplicationsPage() {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="font-medium text-gray-900">
-                            {application.student?.full_name}
+                            {application.student_name || 'Student'}
                           </div>
                           <div className="text-sm text-gray-500">
                             {application.student_regno}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {application.student?.email}
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {application.scholarship?.title}
+                          {application.scholarship?.title || 'Scholarship'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -192,68 +332,38 @@ export default function AdminApplicationsPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {application.status === 'pending' && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => updateApplicationStatus(application.id, 'approved')}
-                              className="bg-green-600 text-white px-3 py-1 rounded text-xs hover:bg-green-700 transition-colors"
-                            >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => updateApplicationStatus(application.id, 'rejected')}
-                              className="bg-red-600 text-white px-3 py-1 rounded text-xs hover:bg-red-700 transition-colors"
-                            >
-                              Reject
-                            </button>
-                          </div>
-                        )}
-                        {application.status !== 'pending' && (
-                          <span className="text-gray-400">Completed</span>
-                        )}
+                        <div className="flex gap-2">
+                          <Link
+                            href={`/admin/applications/${application.id}`}
+                            className="text-blue-600 hover:text-blue-900 inline-flex items-center gap-1"
+                          >
+                            <Eye className="w-4 h-4" />
+                            View
+                          </Link>
+                          
+                          {application.status === 'pending' && (
+                            <>
+                              <button
+                                onClick={() => updateApplicationStatus(application.id, 'approved')}
+                                className="text-green-600 hover:text-green-900 text-xs font-medium"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() => updateApplicationStatus(application.id, 'rejected')}
+                                className="text-red-600 hover:text-red-900 text-xs font-medium"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
-          </div>
-        </div>
-
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3">
-              <Clock className="w-8 h-8 text-yellow-500" />
-              <div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {applications.filter(app => app.status === 'pending').length}
-                </div>
-                <div className="text-sm text-gray-600">Pending</div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="w-8 h-8 text-green-500" />
-              <div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {applications.filter(app => app.status === 'approved').length}
-                </div>
-                <div className="text-sm text-gray-600">Approved</div>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="flex items-center gap-3">
-              <XCircle className="w-8 h-8 text-red-500" />
-              <div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {applications.filter(app => app.status === 'rejected').length}
-                </div>
-                <div className="text-sm text-gray-600">Rejected</div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
