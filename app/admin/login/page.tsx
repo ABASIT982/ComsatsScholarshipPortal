@@ -40,11 +40,12 @@ export default function AdminLogin() {
       }
 
       // ✅ USE AUTH CONTEXT FOR LOGIN
-      login({
-        name: data.admin?.name || 'Administrator',
-        regno: 'admin',
-        token: data.token
-      });
+login({
+  name: data.admin?.name || 'Administrator',
+  regno: 'admin',
+  token: data.token,
+  type: 'admin' // ADD THIS LINE
+});
 
       // ✅ STORE ADDITIONAL ADMIN DATA (KEEP YOUR EXISTING LOGIC)
       localStorage.setItem("adminToken", data.token);

@@ -49,11 +49,12 @@ const handleSubmit = async (e: React.FormEvent) => {
     }
 
     // ✅ USE AUTH CONTEXT INSTEAD OF DIRECT LOCALSTORAGE
-    login({
-      name: data.user.full_name,
-      regno: data.user.regno
-    });
-
+    // ✅ USE AUTH CONTEXT INSTEAD OF DIRECT LOCALSTORAGE
+login({
+  name: data.user.full_name,
+  regno: data.user.regno,
+  type: 'student' // ADD THIS LINE
+});
     // ✅ STORE ADDITIONAL STUDENT DATA IN LOCALSTORAGE
     localStorage.setItem('studentToken', data.user.regno);
     localStorage.setItem('studentName', data.user.full_name);

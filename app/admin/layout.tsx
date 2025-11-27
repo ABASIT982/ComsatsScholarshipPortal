@@ -2,7 +2,7 @@
 import { usePathname } from "next/navigation";
 import { AdminSidebar } from '@/components/admin/AdminSidebar'
 import { AdminHeader } from '@/components/admin/AdminHeader'
-import ProtectedRoute from '@/components/ProtectedRoute'
+import AdminProtectedRoute from '@/components/AdminProtectedRoute' // CHANGE THIS
 
 export default function AdminLayout({
   children,
@@ -17,7 +17,7 @@ export default function AdminLayout({
   }
 
   return (
-    <ProtectedRoute>
+    <AdminProtectedRoute> {/* CHANGE THIS */}
       <div className="flex min-h-screen bg-gray-50/30">
         {/* Fixed Sidebar */}
         <div className="fixed left-0 top-0 h-screen z-40">
@@ -37,6 +37,6 @@ export default function AdminLayout({
           </main>
         </div>
       </div>
-    </ProtectedRoute>
+    </AdminProtectedRoute>
   );
 }

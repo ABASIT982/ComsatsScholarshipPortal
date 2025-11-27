@@ -1,6 +1,6 @@
 import { StudentSidebar } from '@/components/student/StudentSidebar'
 import { StudentHeader } from '@/components/student/StudentHeader'
-import ProtectedRoute from '@/components/ProtectedRoute'
+import StudentProtectedRoute from '@/components/StudentProtectedRoute' // CHANGE THIS
 
 export default function StudentLayout({
   children,
@@ -8,7 +8,7 @@ export default function StudentLayout({
   children: React.ReactNode
 }) {
   return (
-    <ProtectedRoute>
+    <StudentProtectedRoute> {/* CHANGE THIS */}
       <div className="flex min-h-screen bg-gray-50/30">
         {/* Fixed Sidebar */}
         <div className="fixed left-0 top-0 h-screen z-40">
@@ -28,6 +28,6 @@ export default function StudentLayout({
           </main>
         </div>
       </div>
-    </ProtectedRoute>
+    </StudentProtectedRoute>
   )
 }

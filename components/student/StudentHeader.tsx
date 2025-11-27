@@ -12,24 +12,24 @@ export function StudentHeader() {
   const router = useRouter()
   const { logout } = useAuth()
 
- // In StudentHeader component
-useEffect(() => {
-  const name = localStorage.getItem('studentName') || 'Student'
-  const regno = localStorage.getItem('studentRegno') || ''
-  const avatar = localStorage.getItem('studentAvatar') || null
-  
-  console.log('👤 Student data from localStorage:', { name, regno, avatar })
-  
-  setStudentName(name)
-  setCurrentRegno(regno)
-  
-  // Only set avatar if we have both regno and avatar
-  if (regno && avatar) {
-    setAvatarUrl(avatar)
-  } else {
-    setAvatarUrl(null)
-  }
-}, [])
+  // In StudentHeader component
+  useEffect(() => {
+    const name = localStorage.getItem('studentName') || 'Student'
+    const regno = localStorage.getItem('studentRegno') || ''
+    const avatar = localStorage.getItem('studentAvatar') || null
+
+    console.log('👤 Student data from localStorage:', { name, regno, avatar })
+
+    setStudentName(name)
+    setCurrentRegno(regno)
+
+    // Only set avatar if we have both regno and avatar
+    if (regno && avatar) {
+      setAvatarUrl(avatar)
+    } else {
+      setAvatarUrl(null)
+    }
+  }, [])
 
   const handleSignOut = () => {
     // Clear all user data from localStorage on sign out
@@ -68,15 +68,15 @@ useEffect(() => {
 
           {/* User Profile with Dropdown */}
           <div className="relative">
-            <button 
+            <button
               onClick={() => setShowUserMenu(!showUserMenu)}
               className="flex items-center gap-2 lg:gap-3 p-2 rounded-xl hover:bg-gray-50 transition-all duration-200 border border-transparent hover:border-gray-200"
             >
               {/* Profile Picture - Shows avatar if exists, otherwise shows initials */}
               <div className="w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
                 {avatarUrl && currentRegno ? (
-                  <img 
-                    src={avatarUrl} 
+                  <img
+                    src={avatarUrl}
                     alt={studentName}
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -103,8 +103,8 @@ useEffect(() => {
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-full flex items-center justify-center shadow-lg overflow-hidden">
                       {avatarUrl && currentRegno ? (
-                        <img 
-                          src={avatarUrl} 
+                        <img
+                          src={avatarUrl}
                           alt={studentName}
                           className="w-full h-full object-cover"
                         />
@@ -120,9 +120,12 @@ useEffect(() => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="py-1">
-                  <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200">
+                  <button
+                    onClick={() => router.push('/student/profile')}
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200"
+                  >
                     <User className="w-4 h-4" />
                     My Profile
                   </button>
@@ -130,7 +133,7 @@ useEffect(() => {
                     <Settings className="w-4 h-4" />
                     Settings
                   </button>
-                  <button 
+                  <button
                     onClick={handleSignOut}
                     className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 rounded-b-xl"
                   >
