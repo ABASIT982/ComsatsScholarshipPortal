@@ -148,7 +148,7 @@ export default function StudentApplicationsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">My Applications</h1>
@@ -201,7 +201,6 @@ export default function StudentApplicationsPage() {
                         <span>Applied: {formatDate(application.applied_at)}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Clock size={16} />
                         <span>Status: 
                           <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(application.status)}`}>
                             {application.status}

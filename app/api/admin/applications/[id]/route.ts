@@ -1,0 +1,138 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const params = await context.params;
+    const { id } = params;
+
+    console.log('🔍 [ADMIN API] Fetching application:', id);
+
+    const { data: application, error } = await supabase
+      .from('scholarship_applications')
+      .select(`
+        *,
+        scholarships (
+          title,
+          description,
+          deadline
+        )
+      `)
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error('❌ [ADMIN API] Database error:', error);
+      return NextResponse.json(
+        { error: 'Database error: ' + error.message },
+        { status: 500 }
+      );
+    }
+
+    if (!application) {
+      return NextResponse.json(
+        { error: 'Application not found' },
+        { status: 404 }
+      );
+    }
+
+    console.log('✅ [ADMIN API] Application found:', application.id);
+
+    // Transform the data
+    const transformedApplication = {
+      id: application.id,
+      scholarship_id: application.scholarship_id,
+      student_regno: application.student_regno,
+      status: application.status,
+      applied_at: application.created_at,
+      notes: application.notes,
+      application_data: application.application_data,
+      scholarship: {
+        title: application.scholarships?.title || 'Unknown Scholarship',
+        description: application.scholarships?.description || '',
+        deadline: application.scholarships?.deadline || ''
+      },
+      student_name: application.application_data?.student_name || 'Student',
+      student_email: application.application_data?.student_email || 'Email not available' // FIXED
+    };
+
+    return NextResponse.json({
+      application: transformedApplication
+    });
+
+  } catch (error: unknown) {
+    console.error('❌ [ADMIN API] Unexpected error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' }, 
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const params = await context.params;
+    const { id } = params;
+    const { status } = await request.json();
+
+    console.log('🔄 [ADMIN API] Updating application status:', { id, status });
+
+    if (!status || !['approved', 'rejected'].includes(status)) {
+      return NextResponse.json(
+        { error: 'Valid status (approved/rejected) is required' },
+        { status: 400 }
+      );
+    }
+
+    // Update application status - REMOVE updated_at if it doesn't exist
+    const { data: application, error } = await supabase
+      .from('scholarship_applications')
+      .update({ 
+        status: status
+        // Remove updated_at if column doesn't exist
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ [ADMIN API] Database error:', error);
+      return NextResponse.json(
+        { error: 'Database error: ' + error.message },
+        { status: 500 }
+      );
+    }
+
+    if (!application) {
+      return NextResponse.json(
+        { error: 'Application not found' },
+        { status: 404 }
+      );
+    }
+
+    console.log('✅ [ADMIN API] Application updated:', application.id);
+
+    return NextResponse.json({
+      application,
+      message: `Application ${status} successfully`
+    });
+
+  } catch (error: unknown) {
+    console.error('❌ [ADMIN API] Unexpected error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' }, 
+      { status: 500 }
+    );
+  }
+}

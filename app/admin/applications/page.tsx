@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Clock, Search, Eye, FileText, Users, Award } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Search, Eye, FileText } from 'lucide-react';
 import Link from 'next/link';
 
 interface Application {
@@ -84,34 +84,6 @@ export default function AdminApplicationsPage() {
     }
   };
 
-  const updateApplicationStatus = async (applicationId: string, newStatus: 'approved' | 'rejected') => {
-    try {
-      console.log('🔄 Updating application status:', applicationId, newStatus);
-      
-      const response = await fetch(`/api/admin/applications/${applicationId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (response.ok) {
-        // Update local state
-        setApplications(prev => prev.map(app => 
-          app.id === applicationId ? { ...app, status: newStatus } : app
-        ));
-        alert(`Application ${newStatus} successfully!`);
-      } else {
-        const data = await response.json();
-        throw new Error(data.error || 'Failed to update application');
-      }
-    } catch (error: any) {
-      console.error('❌ Error updating application:', error);
-      alert(`Error: ${error.message}`);
-    }
-  };
-
   const filteredApplications = applications.filter(app => {
     const matchesSearch = 
       app.student_regno.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -174,7 +146,7 @@ export default function AdminApplicationsPage() {
           <p className="text-gray-600 mt-2">Review and manage all scholarship applications</p>
         </div>
 
-        {/* Statistics Cards - MOVED TO TOP */}
+        {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
@@ -333,30 +305,14 @@ export default function AdminApplicationsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
+                          {/* Only View Button - No Approve/Reject */}
                           <Link
                             href={`/admin/applications/${application.id}`}
-                            className="text-blue-600 hover:text-blue-900 inline-flex items-center gap-1"
+                            className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-xs font-medium"
                           >
-                            <Eye className="w-4 h-4" />
-                            View
+                            <Eye className="w-3 h-3" />
+                            View Details
                           </Link>
-                          
-                          {application.status === 'pending' && (
-                            <>
-                              <button
-                                onClick={() => updateApplicationStatus(application.id, 'approved')}
-                                className="text-green-600 hover:text-green-900 text-xs font-medium"
-                              >
-                                Approve
-                              </button>
-                              <button
-                                onClick={() => updateApplicationStatus(application.id, 'rejected')}
-                                className="text-red-600 hover:text-red-900 text-xs font-medium"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
                         </div>
                       </td>
                     </tr>
