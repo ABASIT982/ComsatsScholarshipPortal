@@ -9,15 +9,13 @@ const supabase = createClient(
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> } // FIX: Use Promise for params
+  context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // FIX: Await the params
     const params = await context.params;
     const { id } = params;
 
     console.log('🔍 [API] Fetching scholarship ID:', id);
-    console.log('🔍 [API] ID type:', typeof id);
 
     if (!id || id === 'undefined') {
       return NextResponse.json(
@@ -32,8 +30,6 @@ export async function GET(
       .eq('id', id)
       .single();
 
-    console.log('🔍 [API] Database response:', { scholarship, error });
-
     if (error) {
       console.error('❌ [API] Database error:', error);
       return NextResponse.json(
@@ -43,7 +39,6 @@ export async function GET(
     }
 
     if (!scholarship) {
-      console.log('❌ [API] Scholarship not found with ID:', id);
       return NextResponse.json(
         { error: 'Scholarship not found' },
         { status: 404 }
@@ -55,6 +50,126 @@ export async function GET(
     return NextResponse.json({ 
       success: true,
       scholarship 
+    });
+
+  } catch (error: unknown) {
+    console.error('❌ [API] Unexpected error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' }, 
+      { status: 500 }
+    );
+  }
+}
+
+// ADD THIS DELETE METHOD
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const params = await context.params;
+    const { id } = params;
+
+    console.log('🗑️ [API] Deleting scholarship:', id);
+
+    if (!id || id === 'undefined') {
+      return NextResponse.json(
+        { error: 'Invalid scholarship ID' },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabase
+      .from('scholarships')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('❌ [API] Database error:', error);
+      return NextResponse.json(
+        { error: 'Database error: ' + error.message },
+        { status: 500 }
+      );
+    }
+
+    console.log('✅ [API] Scholarship deleted successfully');
+
+    return NextResponse.json({
+      success: true,
+      message: 'Scholarship deleted successfully'
+    });
+
+  } catch (error: unknown) {
+    console.error('❌ [API] Unexpected error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' }, 
+      { status: 500 }
+    );
+  }
+}
+
+// edit 
+export async function PUT(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const params = await context.params;
+    const { id } = params;
+    const { title, description, deadline, status } = await request.json();
+
+    console.log('✏️ [API] Updating scholarship:', id);
+
+    if (!id || id === 'undefined') {
+      return NextResponse.json(
+        { error: 'Invalid scholarship ID' },
+        { status: 400 }
+      );
+    }
+
+    // Validate required fields
+    if (!title?.trim() || !description?.trim() || !deadline) {
+      return NextResponse.json(
+        { error: 'Title, description, and deadline are required' },
+        { status: 400 }
+      );
+    }
+
+    // Update the scholarship
+    const { data: scholarship, error } = await supabase
+      .from('scholarships')
+      .update({
+        title,
+        description,
+        deadline,
+        status,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('❌ [API] Database error:', error);
+      return NextResponse.json(
+        { error: 'Database error: ' + error.message },
+        { status: 500 }
+      );
+    }
+
+    if (!scholarship) {
+      return NextResponse.json(
+        { error: 'Scholarship not found' },
+        { status: 404 }
+      );
+    }
+
+    console.log('✅ [API] Scholarship updated:', scholarship.id);
+
+    return NextResponse.json({
+      success: true,
+      scholarship,
+      message: 'Scholarship updated successfully'
     });
 
   } catch (error: unknown) {

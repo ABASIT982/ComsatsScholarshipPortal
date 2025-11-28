@@ -38,25 +38,30 @@ export default function AdminScholarshipsPage() {
     }
   };
 
-  const deleteScholarship = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this scholarship?')) return;
+const deleteScholarship = async (scholarshipId: string) => {
+  if (!confirm('Are you sure you want to delete this scholarship? This action cannot be undone.')) {
+    return;
+  }
 
-    try {
-      const response = await fetch(`/api/scholarships/${id}`, {
-        method: 'DELETE',
-      });
+  try {
+    const response = await fetch(`/api/scholarships/${scholarshipId}`, {
+      method: 'DELETE',
+    });
 
-      if (!response.ok) {
-        throw new Error('Failed to delete scholarship');
-      }
+    const data = await response.json();
 
-      // Remove from local state
-      setScholarships(scholarships.filter(s => s.id !== id));
-      alert('Scholarship deleted successfully');
-    } catch (err: any) {
-      alert('Error deleting scholarship: ' + err.message);
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to delete scholarship');
     }
-  };
+
+    // Remove from local state
+    setScholarships(prev => prev.filter(s => s.id !== scholarshipId));
+    alert('Scholarship deleted successfully!');
+    
+  } catch (error: any) {
+    alert('Error deleting scholarship: ' + error.message);
+  }
+};
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -135,20 +140,23 @@ export default function AdminScholarshipsPage() {
                   </span>
                   
                   {/* Actions */}
-                  <div className="flex gap-2">
-                    <Link
-                      href={`/admin/scholarships/${scholarship.id}`}
-                      className="text-gray-400 hover:text-blue-600 transition-colors"
-                    >
-                      <Edit size={18} />
-                    </Link>
-                    <button
-                      onClick={() => deleteScholarship(scholarship.id)}
-                      className="text-gray-400 hover:text-red-600 transition-colors"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
+                 {/* Actions */}
+<div className="flex gap-1">
+  <Link
+    href={`/admin/scholarships/${scholarship.id}`}
+    className="flex items-center justify-center w-8 h-8 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors"
+    title="Edit Scholarship"
+  >
+    <Edit size={16} />
+  </Link>
+  <button
+    onClick={() => deleteScholarship(scholarship.id)}
+    className="flex items-center justify-center w-8 h-8 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+    title="Delete Scholarship"
+  >
+    <Trash2 size={16} />
+  </button>
+</div>
                 </div>
 
                 {/* Title */}
