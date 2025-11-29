@@ -5,6 +5,7 @@ interface User {
   name: string;
   regno: string;
   token?: string;
+  email?: string; 
   type: 'student' | 'admin'; // ADD TYPE FIELD
 }
 
@@ -97,6 +98,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('studentToken', userData.token || 'student-token');
       localStorage.setItem('studentName', userData.name);
       localStorage.setItem('studentRegno', userData.regno);
+      localStorage.setItem('studentEmail', userData.email || '');        // STORE EMAIL
+
     }
     setUser({ ...userData, type: userData.regno === 'admin' ? 'admin' : 'student' });
   };

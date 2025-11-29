@@ -24,9 +24,13 @@ export async function GET(
       );
     }
 
+    // UPDATED: Fetch scholarship with ALL fields including form configuration
     const { data: scholarship, error } = await supabase
       .from('scholarships')
-      .select('*')
+      .select(`
+        *,
+        scholarship_form_fields (*)
+      `)
       .eq('id', id)
       .single();
 
@@ -46,6 +50,12 @@ export async function GET(
     }
 
     console.log('✅ [API] Scholarship found:', scholarship.id, scholarship.title);
+    console.log('📋 [API] Form configuration:', {
+      student_types: scholarship.student_types,
+      form_template: scholarship.form_template,
+      custom_fields: scholarship.custom_fields,
+      form_fields_count: scholarship.scholarship_form_fields?.length || 0
+    });
     
     return NextResponse.json({ 
       success: true,
@@ -108,7 +118,7 @@ export async function DELETE(
   }
 }
 
-// edit 
+// UPDATED: Edit method to handle form configuration
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -116,7 +126,15 @@ export async function PUT(
   try {
     const params = await context.params;
     const { id } = params;
-    const { title, description, deadline, status } = await request.json();
+    const { 
+      title, 
+      description, 
+      deadline, 
+      status,
+      student_types,
+      form_template,
+      custom_fields = []
+    } = await request.json();
 
     console.log('✏️ [API] Updating scholarship:', id);
 
@@ -135,16 +153,24 @@ export async function PUT(
       );
     }
 
+    // UPDATED: Prepare update data with form configuration
+    const updateData: any = {
+      title,
+      description,
+      deadline,
+      status,
+      updated_at: new Date().toISOString()
+    };
+
+    // Add form configuration if provided
+    if (student_types !== undefined) updateData.student_types = student_types;
+    if (form_template !== undefined) updateData.form_template = form_template;
+    if (custom_fields !== undefined) updateData.custom_fields = form_template === 'custom' ? custom_fields : [];
+
     // Update the scholarship
     const { data: scholarship, error } = await supabase
       .from('scholarships')
-      .update({
-        title,
-        description,
-        deadline,
-        status,
-        updated_at: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();
@@ -162,6 +188,42 @@ export async function PUT(
         { error: 'Scholarship not found' },
         { status: 404 }
       );
+    }
+
+    // UPDATED: Handle custom form fields if template is custom
+    if (form_template === 'custom' && custom_fields.length > 0) {
+      // Delete existing custom fields
+      await supabase
+        .from('scholarship_form_fields')
+        .delete()
+        .eq('scholarship_id', id);
+
+      // Insert new custom fields
+      const formFieldsData = custom_fields.map((field: any, index: number) => ({
+        scholarship_id: id,
+        field_type: field.type,
+        field_label: field.label,
+        field_name: field.name,
+        placeholder: field.placeholder || '',
+        is_required: field.required || false,
+        field_order: index,
+        validation_rules: field.validation || {},
+        options: field.options || null
+      }));
+
+      const { error: fieldsError } = await supabase
+        .from('scholarship_form_fields')
+        .insert(formFieldsData);
+
+      if (fieldsError) {
+        console.error('❌ [API] Error saving custom fields:', fieldsError);
+      }
+    } else if (form_template !== 'custom') {
+      // Delete custom fields if switching from custom to template
+      await supabase
+        .from('scholarship_form_fields')
+        .delete()
+        .eq('scholarship_id', id);
     }
 
     console.log('✅ [API] Scholarship updated:', scholarship.id);

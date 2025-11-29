@@ -2,6 +2,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Save } from 'lucide-react';
+import { TEMPLATE_OPTIONS } from '@/lib/form-templates';
+
+type CustomField = {
+  type: string;
+  label: string;
+  name: string;
+  required: boolean;
+  placeholder: string;
+};
 
 export default function EditScholarshipPage() {
   const params = useParams();
@@ -16,8 +25,13 @@ export default function EditScholarshipPage() {
     title: '',
     description: '',
     deadline: '',
-    status: 'active'
+    status: 'active',
+    student_types: ['undergraduate'],
+    form_template: 'basic',
+    custom_fields: [] as CustomField[]
   });
+
+  const [customFields, setCustomFields] = useState<CustomField[]>([]);
 
   // Fetch scholarship data on component mount
   useEffect(() => {
@@ -26,6 +40,8 @@ export default function EditScholarshipPage() {
 
   const fetchScholarship = async () => {
     try {
+      console.log('🔄 Fetching scholarship for edit:', scholarshipId);
+      
       const response = await fetch(`/api/scholarships/${scholarshipId}`);
       const data = await response.json();
 
@@ -34,14 +50,25 @@ export default function EditScholarshipPage() {
       }
 
       if (data.scholarship) {
+        console.log('✅ Scholarship data loaded:', data.scholarship);
+        
         setFormData({
           title: data.scholarship.title,
           description: data.scholarship.description,
-          deadline: data.scholarship.deadline.split('T')[0], // Format date for input
-          status: data.scholarship.status
+          deadline: data.scholarship.deadline.split('T')[0],
+          status: data.scholarship.status,
+          student_types: data.scholarship.student_types || ['undergraduate'],
+          form_template: data.scholarship.form_template || 'basic',
+          custom_fields: data.scholarship.custom_fields || []
         });
+
+        // Set custom fields if they exist
+        if (data.scholarship.custom_fields) {
+          setCustomFields(data.scholarship.custom_fields);
+        }
       }
     } catch (err: any) {
+      console.error('❌ Error fetching scholarship:', err);
       setError(err.message);
     } finally {
       setFetchLoading(false);
@@ -60,13 +87,19 @@ export default function EditScholarshipPage() {
       return;
     }
 
+    // Prepare submission data
+    const submissionData = {
+      ...formData,
+      custom_fields: formData.form_template === 'custom' ? customFields : []
+    };
+
     try {
       const response = await fetch(`/api/scholarships/${scholarshipId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submissionData),
       });
 
       const data = await response.json();
@@ -92,6 +125,52 @@ export default function EditScholarshipPage() {
       ...prev,
       [name]: value
     }));
+  };
+
+  // Handle student type selection
+  const handleStudentTypeChange = (studentType: string, checked: boolean) => {
+    setFormData(prev => {
+      const types = checked 
+        ? [...prev.student_types, studentType]
+        : prev.student_types.filter(t => t !== studentType);
+      
+      // Ensure at least one student type is selected
+      if (types.length === 0) return prev;
+      
+      return { ...prev, student_types: types };
+    });
+  };
+
+  // Add custom field
+  const addCustomField = () => {
+    setCustomFields(prev => [
+      ...prev, 
+      { 
+        type: 'text', 
+        label: '', 
+        name: '', 
+        required: false,
+        placeholder: ''
+      }
+    ]);
+  };
+
+  // Update custom field
+  const updateCustomField = (index: number, field: keyof CustomField, value: any) => {
+    const updated = [...customFields];
+    updated[index] = { ...updated[index], [field]: value };
+    
+    // Auto-generate field name from label
+    if (field === 'label') {
+      updated[index].name = value.toLowerCase().replace(/\s+/g, '_');
+    }
+    
+    setCustomFields(updated);
+  };
+
+  // Remove custom field
+  const removeCustomField = (index: number) => {
+    setCustomFields(prev => prev.filter((_, i) => i !== index));
   };
 
   // Set minimum date to today for deadline
@@ -171,9 +250,135 @@ export default function EditScholarshipPage() {
               />
             </div>
 
+            {/* NEW: Student Type Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Student Types *
+              </label>
+              <div className="flex gap-6">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.student_types.includes('undergraduate')}
+                    onChange={(e) => handleStudentTypeChange('undergraduate', e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                    disabled={loading}
+                  />
+                  <span className="text-gray-700">Undergraduate Students</span>
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.student_types.includes('graduate')}
+                    onChange={(e) => handleStudentTypeChange('graduate', e.target.checked)}
+                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                    disabled={loading}
+                  />
+                  <span className="text-gray-700">Graduate Students</span>
+                </label>
+              </div>
+            </div>
+
+            {/* NEW: Form Template Selection */}
+            <div>
+              <label htmlFor="form_template" className="block text-sm font-medium text-gray-700 mb-2">
+                Application Form Type *
+              </label>
+              <select
+                id="form_template"
+                name="form_template"
+                value={formData.form_template}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                disabled={loading}
+              >
+                {TEMPLATE_OPTIONS.map(template => (
+                  <option key={template.value} value={template.value}>
+                    {template.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-sm text-gray-500 mt-2">
+                {TEMPLATE_OPTIONS.find(t => t.value === formData.form_template)?.description}
+              </p>
+            </div>
+
+            {/* NEW: Custom Fields Builder */}
+            {formData.form_template === 'custom' && (
+              <div className="border-t pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900">Custom Form Fields</h3>
+                  <button
+                    type="button"
+                    onClick={addCustomField}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    + Add Field
+                  </button>
+                </div>
+                
+                {customFields.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">
+                    No custom fields added yet. Click "Add Field" to start building your form.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {customFields.map((field, index) => (
+                      <div key={index} className="flex gap-4 p-4 border border-gray-200 rounded-lg">
+                        <select
+                          value={field.type}
+                          onChange={(e) => updateCustomField(index, 'type', e.target.value)}
+                          className="px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="text">Text</option>
+                          <option value="number">Number</option>
+                          <option value="email">Email</option>
+                          <option value="textarea">Text Area</option>
+                          <option value="file">File Upload</option>
+                        </select>
+                        
+                        <input
+                          type="text"
+                          placeholder="Field Label"
+                          value={field.label}
+                          onChange={(e) => updateCustomField(index, 'label', e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        
+                        <input
+                          type="text"
+                          placeholder="Placeholder (optional)"
+                          value={field.placeholder}
+                          onChange={(e) => updateCustomField(index, 'placeholder', e.target.value)}
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        
+                        <label className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={field.required}
+                            onChange={(e) => updateCustomField(index, 'required', e.target.checked)}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-700">Required</span>
+                        </label>
+                        
+                        <button
+                          type="button"
+                          onClick={() => removeCustomField(index)}
+                          className="bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Deadline & Status */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Deadline */}
               <div>
                 <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-2">
                   Application Deadline *
@@ -191,7 +396,6 @@ export default function EditScholarshipPage() {
                 />
               </div>
 
-              {/* Status */}
               <div>
                 <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
                   Status
