@@ -103,14 +103,16 @@ useEffect(() => {
     );
   }
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
+return (
+  <div className="w-full min-h-screen bg-white text-black dark:bg-white dark:text-black">
+    <div className="container mx-auto px-4 sm:px-6 md:px-8 py-6 sm:py-8">
+      <div className="max-w-4xl mx-auto bg-white p-4 sm:p-6 md:p-8 rounded-xl shadow-sm">
+        
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
             {profileComplete ? 'My Profile' : 'Complete Your Profile'}
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-700 text-sm sm:text-base">
             {profileComplete 
               ? 'View and manage your profile information' 
               : 'Please complete your profile information to continue'
@@ -122,12 +124,14 @@ useEffect(() => {
           <StudentProfileForm 
             onComplete={handleProfileComplete} 
             user={user}
-            existingData={profileData} // Pass existing data if profile exists but not completed
+            existingData={profileData}
           />
         ) : (
           <StudentProfileView user={user} profileData={profileData} />
         )}
       </div>
     </div>
-  );
+  </div>
+);
+
 }

@@ -15,28 +15,28 @@ export default function Navbar() {
   return (
     <nav className="fixed top-0 left-0 w-full z-50 backdrop-blur-md bg-gradient-to-r from-blue-900/80 via-indigo-900/70 to-purple-900/70 border-b border-blue-400/20 shadow-lg">
       <div className="w-full px-6 md:px-16 py-3 flex justify-between items-center">
-        {/* Logo and Title */}
+        {/* Logo and Title - FIXED FOR MOBILE */}
         <div className="flex items-center gap-3">
           <Image
             src="/images/comsats.jpg"
             alt="Comsats Logo"
-            width={60}
-            height={60}
+            width={45}
+            height={45}
             className="rounded-full shadow-md border-2 border-blue-400/60"
           />
 
           <div className="flex flex-col leading-tight text-white">
-            <span className="text-4xl md:text-2xl font-bold tracking-wide">
+            <span className="text-2xl md:text-2xl font-bold tracking-wide">
               COMSATS
             </span>
-            <span className=" md:text-1xl font-normal text-blue-200 tracking-wide">
+            <span className="text-sm md:text-1xl font-normal text-blue-200 tracking-wide">
               Scholarship Portal
             </span>
           </div>
         </div>
 
         {/* Desktop Links */}
-        <div className="hidden md:flex items-center gap-10">
+        <div className="hidden lg:flex items-center gap-10">
           <div className="flex items-center gap-8">
             <Link
               href="/"
@@ -81,9 +81,9 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu Button */}
+        {/* Mobile Menu Button - FIXED FOR IPAD (shows on md and lg screens) */}
         <button
-          className="md:hidden text-cyan-300"
+          className="lg:hidden text-cyan-300"
           onClick={() => setIsOpen(!isOpen)}
         >
           {isOpen ? <X size={28} /> : <Menu size={28} />}
@@ -93,7 +93,7 @@ export default function Navbar() {
       {/* BACKGROUND OVERLAY when menu open */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 md:hidden"
+          className="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 lg:hidden"
           onClick={() => setIsOpen(false)} // Click outside closes menu
         ></div>
       )}
@@ -101,7 +101,7 @@ export default function Navbar() {
       {/* Mobile Sidebar Menu */}
       <div
         className={`fixed top-0 left-0 h-full w-3/4 sm:w-1/2 bg-gradient-to-b from-blue-950/95 via-indigo-950/95 to-purple-950/95 backdrop-blur-xl shadow-2xl border-r border-cyan-400/20 transform transition-transform duration-500 ease-in-out z-40 ${isOpen ? "translate-x-0" : "-translate-x-full"
-          } md:hidden`}
+          } lg:hidden`}
       >
         {/* Sidebar Header with Logo */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-cyan-400/20">
@@ -123,8 +123,7 @@ export default function Navbar() {
         </div>
 
         {/* Sidebar Links */}
-        {/* Sidebar Links */}
-        <div className="flex flex-col gap-5 px-6 py-6 text-left bg-gradient-to-b from-blue-950/90 via-indigo-950/90 to-purple-950/90 md:bg-transparent">
+        <div className="flex flex-col gap-5 px-6 py-6 text-left bg-gradient-to-b from-blue-950/90 via-indigo-950/90 to-purple-950/90 lg:bg-transparent">
 
           <Link
             href="/"

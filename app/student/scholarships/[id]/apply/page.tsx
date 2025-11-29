@@ -609,10 +609,6 @@ const handleSubmit = async (e: React.FormEvent) => {
                   <span className="text-blue-700">Email:</span>
                   <p className="font-medium">{localStorage.getItem('studentEmail') || 'student@edu.pk'}</p>
                 </div>
-                <div>
-                  <span className="text-blue-700">Department:</span>
-                  <p className="font-medium">Enter in form below</p>
-                </div>
               </div>
             </div>
 

@@ -107,16 +107,6 @@ export function StudentSidebar() {
 
         {/* Footer Actions - Fixed at bottom */}
         <div className="p-4 border-t border-blue-700 space-y-2 shrink-0">
-          {/* Back to Website */}
-          <Link
-            href="/"
-            className="flex items-center gap-3 px-4 py-3 text-sm font-medium text-blue-100 hover:bg-white/10 hover:text-white rounded-xl transition-all duration-200 group hover:scale-[1.02]"
-            onClick={() => setIsMobileOpen(false)}
-          >
-            <Globe className="w-5 h-5 text-blue-300 group-hover:text-white" />
-            <span>Back to Website</span>
-          </Link>
-
           {/* Logout */}
           <button 
             onClick={handleSignOut}
