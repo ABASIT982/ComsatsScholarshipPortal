@@ -12,6 +12,7 @@ import {
   Menu,
   X,
   LogOut,
+  BarChart3,
   Globe
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -22,7 +23,7 @@ const menuItems = [
   { name: 'My Profile', href: '/student/profile', icon: User },
   { name: 'Scholarships', href: '/student/scholarships', icon: Award },
   { name: 'Applications', href: '/student/applications', icon: FileText },
-  { name: 'Documents', href: '/student/documents', icon: FolderOpen },
+  { name: 'Merit List', href: '/student/merit-list', icon: BarChart3 },
   { name: 'Settings', href: '/student/settings', icon: Settings },
 ]
 
