@@ -63,13 +63,12 @@ export default function ApplicationDetailsPage() {
     });
   };
 
-  // FIXED: Render dynamic form fields (don't exclude documents)
+  //----------------------------This is for Render dynamic form fields-----------------------------------
   const renderFormData = () => {
     if (!application?.application_data) return null;
 
     const appData = application.application_data;
     
-    // Only exclude these specific fields, NOT documents
     const excludedKeys = [
       'student_name', 
       'student_email', 
@@ -96,7 +95,7 @@ export default function ApplicationDetailsPage() {
     return formFields.length > 0 ? formFields : null;
   };
 
-  // FIXED: Render documents section
+  //---------------------------This is for Render documents section-------------------------------
   const renderDocuments = () => {
     const documents = application?.application_data?.documents;
     
@@ -210,7 +209,7 @@ export default function ApplicationDetailsPage() {
         </Link>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {/* Header */}
+          {/*-----------------------------This is for Header --------------------------------------*/}
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 text-white">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
@@ -233,7 +232,7 @@ export default function ApplicationDetailsPage() {
             </div>
           </div>
 
-          {/* Navigation Tabs */}
+          {/*-------------------------------This is for Navigation Tabs -----------------------------------------*/}
           <div className="border-b border-gray-200">
             <nav className="flex space-x-8 px-8">
               {['personal', 'application', 'documents'].map((tab) => (
@@ -255,10 +254,10 @@ export default function ApplicationDetailsPage() {
           </div>
 
           <div className="p-8">
-            {/* Personal Information Tab */}
+            {/*-------------------------------This is for Personal Information Tab --------------------------------*/}
             {activeTab === 'personal' && (
               <div className="grid md:grid-cols-2 gap-8">
-                {/* Student Information */}
+                {/*-------------------------------This is for Student Information --------------------------------*/}
                 <div className="space-y-6">
                   <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                     <User className="w-5 h-5 text-blue-600" />
@@ -297,7 +296,7 @@ export default function ApplicationDetailsPage() {
                   </div>
                 </div>
 
-                {/* Scholarship & Status Information */}
+                {/*-------------------------------This is for Scholarship & Status Information ------------------------------*/}
                 <div className="space-y-6">
                   <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                     <Award className="w-5 h-5 text-green-600" />
@@ -333,7 +332,7 @@ export default function ApplicationDetailsPage() {
               </div>
             )}
 
-            {/* Application Data Tab */}
+            {/*-------------------------------This is for Application Data Tab -----------------------------------*/}
             {activeTab === 'application' && (
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -341,7 +340,7 @@ export default function ApplicationDetailsPage() {
                   Application Form Data
                 </h2>
 
-                {/* Additional Information */}
+                {/*----------------------------This is for Additional Information -------------------------------*/}
                 {application.application_data?.additional_info && (
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-3 text-gray-800">Personal Statement</h3>
@@ -353,7 +352,7 @@ export default function ApplicationDetailsPage() {
                   </div>
                 )}
 
-                {/* Dynamic Form Fields */}
+                {/*----------------------------This is for Dynamic Form Fields -------------------------------*/}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 text-gray-800">Form Responses</h3>
                   <div className="bg-white border border-gray-200 rounded-lg divide-y">
@@ -369,7 +368,7 @@ export default function ApplicationDetailsPage() {
               </div>
             )}
 
-            {/* Documents Tab */}
+            {/*-----------------------------This is for Documents Tab ---------------------------*/}
             {activeTab === 'documents' && (
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -393,7 +392,7 @@ export default function ApplicationDetailsPage() {
               </div>
             )}
 
-            {/* Action Buttons */}
+            {/*-----------------------------This is for Action Buttons --------------------------------------*/}
             {application.status === 'pending' && (
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <h3 className="text-lg font-semibold mb-4">Review Application</h3>

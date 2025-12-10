@@ -25,7 +25,7 @@ import {
   ResponsiveContainer 
 } from 'recharts'
 
-// Mock data for charts
+//------------------------------------------This is for Mock data for charts-------------------------------------------
 const applicationData = [
   { month: 'Jan', applications: 45, approved: 35 },
   { month: 'Feb', applications: 52, approved: 42 },
@@ -52,7 +52,7 @@ const statusData = [
 export default function AdminDashboard() {
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/*-----------------------------This is for Header -------------------------------------*/}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Dashboard Overview</h1>
@@ -64,7 +64,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/*------------------------------------This is for Stats Grid --------------------------------------*/}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Students"
@@ -100,9 +100,9 @@ export default function AdminDashboard() {
         />
       </div>
 
-      {/* Charts Grid */}
+      {/*-----------------------------------This is for Charts Grid --------------------------------------------*/}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Applications Trend Chart */}
+        {/*----------------------------This is for Applications Trend Chart ---------------------------*/}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900">Applications Trend</h3>
@@ -132,7 +132,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Scholarship Distribution */}
+        {/*--------------------------------This is for Scholarship Distribution ---------------------------------*/}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Scholarship Distribution</h3>
           <div className="h-80">
@@ -159,9 +159,9 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Bottom Grid */}
+      {/*--------------------------------------This is for Bottom Grid ----------------------------------------*/}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Application Status */}
+        {/*--------------------------------This is for Application Status --------------------------------------*/}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Application Status</h3>
           <div className="space-y-4">
@@ -180,7 +180,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Stats */}
+        {/*--------------------------------------This is for Quick Stats ---------------------------------------*/}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Quick Stats</h3>
           <div className="space-y-4">
@@ -191,7 +191,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/*----------------------------------This is for Recent Activity ---------------------------------------*/}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Recent Activity</h3>
           <div className="space-y-4">
@@ -206,7 +206,7 @@ export default function AdminDashboard() {
   )
 }
 
-// Stat Card Component
+//-----------------------------------This is for Stat Card Component---------------------------------------
 interface StatCardProps {
   title: string
   value: string
@@ -242,7 +242,7 @@ function StatCard({ title, value, change, trend, icon, color }: StatCardProps) {
   )
 }
 
-// Stat Item Component
+//------------------------------------This is for Stat Item Component---------------------------------------
 function StatItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-center justify-between py-2">
@@ -255,7 +255,7 @@ function StatItem({ icon, label, value }: { icon: React.ReactNode; label: string
   )
 }
 
-// Activity Item Component
+//-------------------------------This is for Activity Item Component----------------------------------
 function ActivityItem({ time, action, user }: { time: string; action: string; user: string }) {
   return (
     <div className="flex items-start gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-200">

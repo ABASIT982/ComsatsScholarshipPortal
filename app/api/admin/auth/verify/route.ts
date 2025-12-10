@@ -9,7 +9,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Token required' }, { status: 400 })
     }
 
-    // Simple token verification for testing
+    //------------------------------This is for Simple token verification for testing---------------------------------
     if (token === 'admin-temp-token-123') {
       return NextResponse.json({
         message: 'Admin verified',

@@ -39,15 +39,15 @@ export default function AdminLogin() {
         return;
       }
 
-      // ✅ USE AUTH CONTEXT FOR LOGIN
+      //-----------------------------This is for USE AUTH CONTEXT FOR LOGIN---------------------------------
 login({
   name: data.admin?.name || 'Administrator',
   regno: 'admin',
   token: data.token,
-  type: 'admin' // ADD THIS LINE
+  type: 'admin' 
 });
 
-      // ✅ STORE ADDITIONAL ADMIN DATA (KEEP YOUR EXISTING LOGIC)
+      //---------------------------This is for STORE ADDITIONAL ADMIN DAT------------------------------------------
       localStorage.setItem("adminToken", data.token);
       localStorage.setItem("admin", JSON.stringify(data.admin));
       
@@ -60,17 +60,16 @@ login({
     }
   };
 
-  // REST OF YOUR CODE REMAINS EXACTLY THE SAME...
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
-        {/* Header */}
+        {/*--------------------------------------------This is for  Header -----------------------------------------*/}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-white mb-2 mt-20">Admin Portal</h1>
           <p className="text-slate-400">COMSATS Scholarship System</p>
         </div>
 
-        {/* Login Card */}
+        {/*---------------------------------------This is for Login Card ----------------------------------------*/}
         <div className="bg-slate-800/50 backdrop-blur-lg border border-slate-700/50 rounded-xl shadow-2xl p-8">
           {error && (
             <div className="mb-6 p-4 bg-red-500/20 border border-red-400/30 rounded-lg text-red-200 text-sm">
@@ -145,7 +144,7 @@ login({
             </button>
           </form>
 
-          {/* Security Notice */}
+          {/*----------------------------------This is for Security Notice ---------------------------------------*/}
           <div className="mt-6 p-4 bg-slate-700/30 border border-slate-600/30 rounded-lg">
             <div className="flex items-start space-x-3">
               <svg className="w-5 h-5 text-indigo-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -161,7 +160,7 @@ login({
           </div>
         </div>
 
-        {/* Back Link */}
+        {/*------------------------------------This is for Back Link ------------------------------------*/}
         <div className="text-center mt-6">
           <Link 
             href="/" 

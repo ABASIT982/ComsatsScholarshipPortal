@@ -21,7 +21,7 @@ export default function StudentsPage() {
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Fetch students from API
+  //---------------------------------This is for Fetch students from API-------------------------------------------
   const fetchStudents = async () => {
     try {
       setLoading(true)
@@ -45,11 +45,11 @@ export default function StudentsPage() {
     }
   }
 
-  // Apply filters - FIXED ERROR
+  //------------------------------------This is for Apply filters---------------------------------------------
   const applyFilters = (newFilters: any) => {
     let filtered = students
 
-    // Search filter - FIXED: Only search by name and regno
+    //-------------------------------------This is for Search filter------------------------------------------ 
     if (newFilters.search) {
       const searchLower = newFilters.search.toLowerCase()
       filtered = filtered.filter(student => 
@@ -58,17 +58,17 @@ export default function StudentsPage() {
       )
     }
 
-    // Session filter
+    //--------------------------------This is for Session filter-----------------------------------------
     if (newFilters.session !== 'all') {
       filtered = filtered.filter(student => student.session === newFilters.session)
     }
 
-    // Department filter
+    //----------------------------------This is for Department filter---------------------------------------
     if (newFilters.department !== 'all') {
       filtered = filtered.filter(student => student.department === newFilters.department)
     }
 
-    // Level filter
+    //-------------------------------------This is for Level filter------------------------------------------
     if (newFilters.level !== 'all') {
       filtered = filtered.filter(student => student.level === newFilters.level)
     }
@@ -77,12 +77,12 @@ export default function StudentsPage() {
   }
 
   const handleViewStudent = (student: Student) => {
-    // TODO: Implement view student modal
+    //------------------------------------This is for TODO: Implement view student modal--------------------------------------
     console.log('View student:', student)
   }
 
   const handleEditStudent = (student: Student) => {
-    // TODO: Implement edit student
+    //-------------------------------------This is for TODO: Implement edit student------------------------------------------
     console.log('Edit student:', student)
   }
 

@@ -10,10 +10,10 @@ const supabase = createClient(
 
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ id: string }> } // FIX: Use Promise for params
+  context: { params: Promise<{ id: string }> } 
 ) {
   try {
-    // FIX: Await the params
+    //------------------------------This is for FIX: Await the params------------------------------
     const params = await context.params;
     const { id } = params;
     
@@ -23,7 +23,7 @@ export async function POST(
     console.log('📨 [APPLY API] Received application for scholarship:', id);
     console.log('📨 [APPLY API] Student:', student_regno);
 
-    // Validate ID
+    //------------------------------This is for Validate ID-------------------------------
     if (!id || id === 'undefined') {
       return NextResponse.json(
         { error: 'Invalid scholarship ID' },
@@ -31,7 +31,7 @@ export async function POST(
       );
     }
 
-    // Validate required fields
+    //------------------------------This is for Validate required fields--------------------------------
     if (!student_regno) {
       return NextResponse.json(
         { error: 'Student registration number is required' },
@@ -39,7 +39,7 @@ export async function POST(
       );
     }
 
-    // Check if scholarship exists
+    //-----------------------------This is for Check if scholarship exists-------------------------------
     const { data: scholarship, error: scholarshipError } = await supabase
       .from('scholarships')
       .select('*')
@@ -66,7 +66,7 @@ export async function POST(
 
     console.log('✅ [APPLY API] Scholarship found:', scholarship.title);
 
-    // Create application
+    //------------------------------This is for Create application-----------------------------------
     const { data: application, error: applicationError } = await supabase
       .from('scholarship_applications')
       .insert([

@@ -11,7 +11,7 @@ export default function Footer() {
     <footer className="bg-gradient-to-b from-blue-950 via-indigo-950 to-blue-950 text-white py-16 px-8 border-t border-cyan-400/20">
       <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-12 text-left">
         
-        {/* Brand / About */}
+        {/* ------------------------------------This  is for Brand / About --------------------------------------------*/}
         <div>
           <h2 className="text-2xl font-bold text-cyan-300 mb-4">COMSATS Scholarship Portal</h2>
           <p className="text-blue-200 leading-relaxed text-sm mb-4">
@@ -26,7 +26,7 @@ export default function Footer() {
           </button>
         </div>
 
-        {/* Discover Section */}
+        {/* -----------------------------------This  is for Discover Section ------------------------------------*/}
         <div>
           <h3 className="text-xl font-semibold text-cyan-300 mb-4">Discover</h3>
           <ul className="space-y-2 text-blue-200 text-sm">
@@ -37,7 +37,7 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Resources Section */}
+        {/* ---------------------------------This  is  for  Resources Section ----------------------------------*/}
         <div>
           <h3 className="text-xl font-semibold text-cyan-300 mb-4">Resources</h3>
           <ul className="space-y-2 text-blue-200 text-sm">
@@ -48,7 +48,7 @@ export default function Footer() {
           </ul>
         </div>
 
-        {/* Social / Partners */}
+        {/* -----------------------------------This  is for Social / Partners ---------------------------------------*/}
         <div>
           <h3 className="text-xl font-semibold text-cyan-300 mb-4">Follow Us</h3>
           <div className="flex gap-4 mb-6 text-cyan-300 text-xl">
@@ -71,7 +71,7 @@ export default function Footer() {
         </div>
       </div>
 
-      {/* Divider */}
+      {/* ----------------------------This is for Divider --------------------------------*/}
       <div className="border-t border-cyan-400/20 mt-12 pt-6 text-center text-sm text-blue-300">
         <p>
           Copyright © {new Date().getFullYear()} All rights reserved | 

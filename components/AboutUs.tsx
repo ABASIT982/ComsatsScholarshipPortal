@@ -25,7 +25,6 @@ export default function AboutUs() {
       className="min-h-screen bg-gradient-to-b from-blue-950 via-indigo-950 to-blue-950 text-white px-6 py-32"
     >
       <div className="max-w-7xl mx-auto">
-        {/* Hero Section */}
         <motion.h1
           initial={false}
           whileInView={{ opacity: 1, y: 0 }}
@@ -47,7 +46,7 @@ export default function AboutUs() {
           candidates.
         </motion.p>
 
-        {/* Mission & Vision */}
+        {/* ---------------------------------This is for Mission & Vision --------------------------------*/}
         <div className="grid md:grid-cols-2 gap-8 mb-16">
           <motion.div
             initial={false}
@@ -85,7 +84,7 @@ export default function AboutUs() {
           </motion.div>
         </div>
 
-        {/* Core Values */}
+        {/* ---------------------------------------This is for Core Values ------------------------------------*/}
         <motion.div
           initial={false}
           whileInView={{ opacity: 1, y: 0 }}
@@ -108,7 +107,7 @@ export default function AboutUs() {
           </div>
         </motion.div>
 
-        {/* Team Section */}
+        {/* -----------------------------------------This is for Team Section -------------------------------------*/}
         <motion.div
           initial={false}
           whileInView={{ opacity: 1, y: 0 }}

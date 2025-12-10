@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     console.log('🔍 Login attempt for regno:', regno)
 
-    // Get student with password hash
+    // -----------------------------This is for Get student with password hash----------------------------------
     const { data: student, error: studentError } = await supabase
       .from('students')
       .select('*')
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
     console.log('📦 Student found:', student.full_name)
 
-    // Check if password_hash exists
+    //------------------------------This is for  Check if password_hash exists-----------------------------------
     if (!student.password_hash) {
       console.log('❌ No password hash found for student')
       return NextResponse.json(
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check password
+    // -------------------------------This is for Check password-------------------------------------
     const isPasswordValid = await bcrypt.compare(password, student.password_hash)
     
     console.log('🔐 Password valid:', isPasswordValid)
@@ -53,7 +53,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // ✅ SUCCESS: Return student data including full_name
     return NextResponse.json({
       message: 'Login successful',
       user: {

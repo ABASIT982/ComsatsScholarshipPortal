@@ -20,7 +20,7 @@ export default function StudentSignup() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const router = useRouter();
 
-  // Manual sessions and departments
+  // -------------------------------This is for sessions and departments-------------------------------------
   const sessions = ['FA21', 'SP21','FA22','SP22','FA23', 'SP23','FA24','SP24','FA25', 'SP25','FA26','SP26',];
   const departments = ['BCS', 'BSE','BBA', 'BEC', 'BDS', 'MCS', 'MSE', 'MBA','MEC','MDS'];
 
@@ -30,7 +30,7 @@ export default function StudentSignup() {
     setSuccess("");
     setLoading(true);
 
-    // Client-side validation with proper messages
+    // --------------------------------This is for client side validation-------------------------------------
     if (!fullName.trim()) {
       setError("Full name is required");
       setLoading(false);
@@ -43,7 +43,6 @@ export default function StudentSignup() {
       return;
     }
 
-    // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError("Please enter a valid email address");
@@ -99,7 +98,6 @@ export default function StudentSignup() {
       const data = await res.json();
 
       if (!res.ok) {
-        // Show API error messages properly
         setError(data.error || "Signup failed. Please try again.");
         return;
       }

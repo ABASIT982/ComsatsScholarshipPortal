@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ [ADMIN API] Found applications:', applications?.length);
 
-    // Transform the data
+    //------------------------------This is for Transform the data------------------------------
     const transformedApplications = applications?.map(app => ({
       id: app.id,
       scholarship_id: app.scholarship_id,

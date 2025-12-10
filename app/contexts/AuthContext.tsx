@@ -6,7 +6,7 @@ interface User {
   regno: string;
   token?: string;
   email?: string; 
-  type: 'student' | 'admin'; // ADD TYPE FIELD
+  type: 'student' | 'admin'; 
 }
 
 interface AuthContextType {
@@ -14,7 +14,6 @@ interface AuthContextType {
   login: (userData: User) => void;
   logout: () => void;
   loading: boolean;
-  // ADD THESE FUNCTIONS
   isStudent: () => boolean;
   isAdmin: () => boolean;
 }
@@ -25,7 +24,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // ADD THESE FUNCTIONS
   const isStudent = () => {
     return !!localStorage.getItem('studentToken');
   };
@@ -39,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const studentAuth = isStudent();
       const adminAuth = isAdmin();
       
-      // If both exist, prefer the current user type
+      //-------------------------This is for  If both exist, prefer the current user type---------------------------
       if (studentAuth && adminAuth) {
         if (user?.type === 'admin') {
           const admin = JSON.parse(localStorage.getItem('admin')!);
@@ -58,7 +56,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
         }
       }
-      // Only student authenticated
+      //--------------------------This is for Only student authenticated------------------------------------------
       else if (studentAuth) {
         setUser({
           name: localStorage.getItem('studentName')!,
@@ -67,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           type: 'student'
         });
       }
-      // Only admin authenticated
+      //-------------------------This is for  Only admin authenticated---------------------------------
       else if (adminAuth) {
         const admin = JSON.parse(localStorage.getItem('admin')!);
         setUser({
@@ -77,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           type: 'admin'
         });
       }
-      // No authentication
+      //----------------------------------This is for  No authentication---------------------------------------
       else {
         setUser(null);
       }
@@ -90,22 +88,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = (userData: User) => {
     if (userData.regno === 'admin') {
-      // Admin login - DON'T clear student data
+  //-----------------------------------This is for  Admin login - DON'T clear student data---------------------------------------
       localStorage.setItem('adminToken', userData.token || 'admin-token');
       localStorage.setItem('admin', JSON.stringify({ name: userData.name }));
     } else {
-      // Student login - DON'T clear admin data
+  //----------------------------------This is for  Student login - DON'T clear admin data-------------------------------------
       localStorage.setItem('studentToken', userData.token || 'student-token');
       localStorage.setItem('studentName', userData.name);
       localStorage.setItem('studentRegno', userData.regno);
-      localStorage.setItem('studentEmail', userData.email || '');        // STORE EMAIL
+      localStorage.setItem('studentEmail', userData.email || '');
 
     }
     setUser({ ...userData, type: userData.regno === 'admin' ? 'admin' : 'student' });
   };
 
   const logout = () => {
-    // Clear everything
+    //--------------------------------------This is for  Clear everything--------------------------------------------
     localStorage.removeItem('studentToken');
     localStorage.removeItem('studentName');
     localStorage.removeItem('studentRegno');
@@ -123,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login, 
       logout, 
       loading,
-      isStudent, // EXPORT THESE
+      isStudent, 
       isAdmin 
     }}>
       {children}

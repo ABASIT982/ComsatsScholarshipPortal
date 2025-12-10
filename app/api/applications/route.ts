@@ -1,5 +1,5 @@
 // app/api/applications/route.ts
-import { NextRequest, NextResponse } from 'next/server'; // ADD THIS IMPORT
+import { NextRequest, NextResponse } from 'next/server'; 
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     console.log('🔍 Fetching applications for student:', student_regno);
 
-    // Get full application data with scholarship details
+    //----------------------------This is for Get full application data with scholarship details-------------------------------
     const { data: applications, error } = await supabase
       .from('scholarship_applications')
       .select(`
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
     console.log('✅ Found applications:', applications?.length);
 
-    // Transform the data to match our interface
+    //----------------------------This is for Transform the data to match our interface-------------------------------------
     const transformedApplications = applications?.map(app => ({
       id: app.id,
       scholarship_id: app.scholarship_id,

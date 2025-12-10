@@ -7,7 +7,7 @@ export async function POST(request: Request) {
 
     console.log('🔐 Login attempt:', { email, password })
 
-    // TEMPORARY: Hardcoded admin for testing (REMOVE LATER)
+    //------------------------------This is for TEMPORARY: Hardcoded admin for testing----------------------------------------
     if (email === 'admin@comsats.edu.pk' && password === 'admin123') {
       return NextResponse.json({
         message: 'Admin login successful',

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { GraduationCap, Award, BookOpen, Users, ArrowRightCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 
-// Floating background icons animation
+// -----------------------------This is for Floating background icons animation--------------------------------
 const floatAnimation = {
   y: [0, -20, 0],
   transition: {
@@ -15,7 +15,7 @@ const floatAnimation = {
   },
 };
 
-// Images for slideshow
+// ----------------------------This is for Images for slideshow--------------------------------------
 const heroImages = [
   "/images/heroSection1.avif",
   "/images/heroSection3.avif",
@@ -26,7 +26,6 @@ const heroImages = [
 export default function HeroSection() {
   const [currentImage, setCurrentImage] = useState(0);
 
-  // Auto-switch image every 4 seconds
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentImage((prev) => (prev + 1) % heroImages.length);
@@ -39,7 +38,6 @@ export default function HeroSection() {
 
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.1),transparent_70%)]"></div>
 
-      {/* Floating Icons - Positioning is fine */}
       <motion.div animate={floatAnimation} className="absolute top-20 left-10 text-yellow-300 opacity-60">
         <Award size={40} />
       </motion.div>
@@ -53,7 +51,7 @@ export default function HeroSection() {
         <Users size={44} />
       </motion.div>
 
-      {/* FIXED LEFT SIDE (Text Content) */}
+      {/* -------------------This is for FIXED LEFT SIDE (Text Content)------------------------ */}
       <motion.div
         initial={{ opacity: 0, x: -50 }}
         animate={{ opacity: 1, x: 0 }}
@@ -84,7 +82,7 @@ export default function HeroSection() {
         </motion.button>
       </motion.div>
 
-      {/* FIXED RIGHT SIDE (Image Carousel Container) */}
+      {/* --------------------------This is for FIXED RIGHT SIDE (Image Carousel Container) --------------------------*/}
       <div
         className="
           relative 
@@ -107,13 +105,11 @@ export default function HeroSection() {
             transition={{ duration: 1.2, ease: "easeInOut" }}
             className={`absolute ${index === currentImage ? "z-10" : "z-0"}`}
           >
-            {/* Using standard HTML img tag */}
             <img
               src={img}
               alt={`Scholarship ${index + 1}`}
               width={600} 
               height={600}
-              // Added max-w-full to ensure img respects container size
               className="
                 drop-shadow-2xl rounded-3xl object-cover max-w-full
                 {/* ADJUSTED: Increased md: width for iPad Pro screens */}
@@ -124,8 +120,6 @@ export default function HeroSection() {
           </motion.div>
         ))}
       </div>
-
-      {/* Background Circles - Positioning is fine */}
       <motion.div
         animate={{ scale: [1, 1.05, 1], opacity: [0.3, 0.5, 0.3] }}
         transition={{ duration: 6, repeat: Infinity }}

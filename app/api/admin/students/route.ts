@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabaseClient'
 
 export async function GET() {
   try {
-    // Fetch students from Supabase
+    //-------------------------------This is for  Fetch students from Supabase----------------------------------
     const { data: students, error } = await supabase
       .from('students')
       .select('*')
@@ -26,7 +26,7 @@ export async function GET() {
       students: students.map(student => ({
         id: student.id,
         name: student.full_name || student.name || 'Unknown',
-        regno: student.reg_number || student.regno || student.email, // Use regno as primary ID
+        regno: student.reg_number || student.regno || student.email, 
         department: student.department || 'Not assigned',
         level: student.level || student.program_type || 'undergraduate',
         session: student.session || student.academic_session || 'fa23',

@@ -108,7 +108,7 @@ export function StudentSidebar() {
 
         {/* Footer Actions - Fixed at bottom */}
         <div className="p-4 border-t border-blue-700 space-y-2 shrink-0">
-          {/* Logout */}
+          {/* Logout 
           <button 
             onClick={handleSignOut}
             className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-red-100 hover:bg-red-500/20 hover:text-white rounded-xl transition-all duration-200 group hover:scale-[1.02]"
@@ -116,6 +116,7 @@ export function StudentSidebar() {
             <LogOut className="w-5 h-5 text-red-300 group-hover:text-white" />
             <span>Logout</span>
           </button>
+          */}
         </div>
       </div>
 

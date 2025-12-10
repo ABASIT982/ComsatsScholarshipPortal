@@ -78,7 +78,7 @@ export default function Scholarships() {
           programs available for both undergraduate and graduate students.
         </motion.p>
 
-        {/* Scholarship Cards Grid */}
+        {/* -----------------------------------This is  for Scholarship Cards Grid ------------------------------------*/}
         <div className="grid md:grid-cols-3 sm:grid-cols-2 gap-10">
           {scholarships.map((item, i) => (
             <motion.div
@@ -113,7 +113,6 @@ export default function Scholarships() {
           ))}
         </div>
 
-        {/* How to Apply Section */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -133,7 +132,6 @@ export default function Scholarships() {
           </button>
         </motion.div>
 
-        {/* Transition Text (no card, just a visual break) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -149,7 +147,6 @@ export default function Scholarships() {
           </p>
         </motion.div>
 
-        {/* Stats Section */}
         <motion.div
           initial={{ opacity: 0, y: 40 }}
           whileInView={{ opacity: 1, y: 0 }}

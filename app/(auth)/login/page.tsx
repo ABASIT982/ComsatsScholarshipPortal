@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from '../../contexts/AuthContext' // CORRECT PATH
+import { useAuth } from '../../contexts/AuthContext' 
 
 export default function StudentLogin() {
   const [prefix, setPrefix] = useState("");
@@ -16,7 +16,7 @@ export default function StudentLogin() {
   const router = useRouter();
   const { login } = useAuth();
 
-  // Manual sessions and departments
+  // ----------------------------------This is for sessions and departments-------------------------------------------
   const sessions = ['FA21', 'SP21','FA22','SP22','FA23', 'SP23','FA24','SP24','FA25', 'SP25','FA26','SP26',];
   const departments = ['BCS', 'BSE','BBA', 'BEC', 'BDS', 'MCS', 'MSE', 'MBA','MEC','MDS'];
 
@@ -48,14 +48,12 @@ const handleSubmit = async (e: React.FormEvent) => {
       return;
     }
 
-    // ✅ USE AUTH CONTEXT INSTEAD OF DIRECT LOCALSTORAGE
-    // ✅ USE AUTH CONTEXT INSTEAD OF DIRECT LOCALSTORAGE
+    // -------------------------This is for  USE AUTH CONTEXT INSTEAD OF DIRECT LOCALSTORAGE------------------------------
 login({
   name: data.user.full_name,
   regno: data.user.regno,
   type: 'student' // ADD THIS LINE
 });
-    // ✅ STORE ADDITIONAL STUDENT DATA IN LOCALSTORAGE
     localStorage.setItem('studentToken', data.user.regno);
     localStorage.setItem('studentName', data.user.full_name);
     localStorage.setItem('studentLevel', data.user.level);
@@ -63,7 +61,7 @@ login({
     localStorage.setItem('studentEmail', data.user.email);
     localStorage.setItem('isAuthenticated', 'true');
 
-    // ✅ GET USER'S PROFILE AVATAR
+    //------------------------------This is to  GET USER'S PROFILE AVATAR---------------------------------
     try {
       const profileRes = await fetch(`/api/get-profile?regno=${data.user.regno}`);
       if (profileRes.ok) {
@@ -72,17 +70,17 @@ login({
           localStorage.setItem('studentAvatar', profileData.avatar_url);
           console.log('💾 Avatar loaded for user:', profileData.avatar_url);
         } else {
-          // Clear any previous avatar if current user has no avatar
+          // -----------------------This is to Clear any previous avatar if current user has no avatar-----------------
           localStorage.removeItem('studentAvatar');
           console.log('ℹ️ No avatar found for user');
         }
       }
     } catch (profileError) {
       console.log('Could not fetch profile avatar');
-      localStorage.removeItem('studentAvatar'); // Clear on error
+      localStorage.removeItem('studentAvatar'); 
     }
 
-    // Redirect to student portal
+    //------------------------------This is to  Redirect to student portal--------------------------------
     router.push("/student/dashboard");
 
   } catch (err) {
@@ -90,7 +88,6 @@ login({
     setLoading(false);
   }
 };
-  // REST OF YOUR CODE REMAINS EXACTLY THE SAME...
   return (
     <section className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900 px-6">
       <div className="w-full max-w-sm bg-white/10 backdrop-blur-md border border-blue-400/30 rounded-2xl p-8 shadow-2xl text-white">

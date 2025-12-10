@@ -23,7 +23,7 @@ export default function AdminApplicationsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Fetch real applications from API
+  //-------------------------------------This is for Fetch real applications from API------------------------------------
   useEffect(() => {
     fetchApplications();
   }, []);
@@ -43,7 +43,7 @@ export default function AdminApplicationsPage() {
       setApplications(data.applications || []);
     } catch (error) {
       console.error('❌ Error fetching applications:', error);
-      // Fallback to localStorage data if API fails
+      //------------------------This is for Fallback to localStorage data if API fails------------------------------------
       const fallbackData = getFallbackApplications();
       setApplications(fallbackData);
     } finally {
@@ -51,10 +51,10 @@ export default function AdminApplicationsPage() {
     }
   };
 
-  // Fallback function to get applications from localStorage
+  //-----------------------------This is for Fallback function to get applications from localStorage---------------------------
   const getFallbackApplications = (): Application[] => {
     try {
-      // Get all student application keys from localStorage
+      //-------------------------This is for Get all student application keys from localStorage-----------------------------
       const allKeys = Object.keys(localStorage);
       const applicationKeys = allKeys.filter(key => key.startsWith('appliedScholarships_'));
       
@@ -140,13 +140,13 @@ export default function AdminApplicationsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
+        {/*--------------------------This is for Header ----------------------------------*/}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Scholarship Applications</h1>
           <p className="text-gray-600 mt-2">Review and manage all scholarship applications</p>
         </div>
 
-        {/* Statistics Cards */}
+        {/*------------------------------This is for Statistics Cards --------------------------------*/}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
@@ -203,10 +203,10 @@ export default function AdminApplicationsPage() {
           </div>
         </div>
 
-        {/* Search and Filters */}
+        {/*-------------------------------------This is for Search and Filters ------------------------------------------*/}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
+            {/*-------------------------------This is for Search --------------------------------------*/}
             <div className="flex-1">
               <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -220,7 +220,7 @@ export default function AdminApplicationsPage() {
               </div>
             </div>
             
-            {/* Status Filter */}
+            {/*----------------------------------This is for Status Filter -----------------------------------------*/}
             <div className="flex gap-2 items-center">
               <select
                 value={statusFilter}
@@ -234,7 +234,7 @@ export default function AdminApplicationsPage() {
               </select>
             </div>
             
-            {/* Refresh Button */}
+            {/*-----------------------------This is for Refresh Button ---------------------------*/}
             <button
               onClick={fetchApplications}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -244,7 +244,7 @@ export default function AdminApplicationsPage() {
           </div>
         </div>
 
-        {/* Applications Table */}
+        {/*----------------------------This is for Applications Table ----------------------------*/}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -305,7 +305,6 @@ export default function AdminApplicationsPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                         <div className="flex gap-2">
-                          {/* Only View Button - No Approve/Reject */}
                           <Link
                             href={`/admin/applications/${application.id}`}
                             className="flex items-center gap-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-xs font-medium"

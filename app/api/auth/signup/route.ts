@@ -6,7 +6,7 @@ export async function POST(request: Request) {
   try {
     const { fullName, email, regno, password, level } = await request.json()
 
-    // Validate all required fields
+    // -------------------------------This is for Validate all required fields---------------------------------
     if (!fullName?.trim() || !regno || !password || !level) {
       return NextResponse.json(
         { error: 'All fields are required' },
@@ -14,10 +14,9 @@ export async function POST(request: Request) {
       )
     }
 
-    // Extract program from regno (FA22-BCS-001 → BCS)
     const program = regno.split('-')[1];
 
-    // Validate level and program combination
+    // -------------------------This is for Validate level and program combination----------------------------
     const undergraduatePrograms = ['BCS', 'BSE', 'BBA', 'BEC', 'BDS'];
     const graduatePrograms = ['MCS', 'MSE', 'MBA', 'MEC', 'MDS'];
 
@@ -35,7 +34,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if regno exists in allowed_students with correct level
+    // ----------------------This is for Check if regno exists in allowed_students with correct level-----------------------
     const { data: allowedStudent, error: checkError } = await supabase
       .from('allowed_students')
       .select('regno, level')
@@ -50,19 +49,18 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if already registered
+    // ----------------------------This is for Check if already registered------------------------------
     const { data: existingUser, error: existingError } = await supabase
       .from('students')
       .select('regno, is_active')
       .eq('regno', regno)
       .single()
 
-    // Hash password
     const hashedPassword = await bcrypt.hash(password, 12)
 
-    // If user exists but is inactive (deleted), update both tables
+// ------------------------This is for If user exists but is inactive (deleted), update both tables--------------------------
     if (existingUser && existingUser.is_active === false) {
-      // Update students table
+      // -----------------------------------This is for Update students table----------------------------------------------
       const { data: updatedStudent, error: updateError } = await supabase
         .from('students')
         .update({
@@ -86,7 +84,7 @@ export async function POST(request: Request) {
         )
       }
 
-      // ✅ CRITICAL FIX: Also update the profiles table
+      //--------------------------------This is for  Also update the profiles table------------------------------------
       const { error: profileUpdateError } = await supabase
         .from('profiles')
         .update({
@@ -98,7 +96,6 @@ export async function POST(request: Request) {
 
       if (profileUpdateError) {
         console.warn('Could not update profiles table:', profileUpdateError)
-        // Continue anyway - don't fail the signup
       }
 
       return NextResponse.json(
@@ -113,7 +110,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // If user exists AND is active, prevent registration
+// --------------------------This is for If user exists AND is active, prevent registration-------------------------------
     if (existingUser && existingUser.is_active !== false) {
       return NextResponse.json(
         { error: 'Registration number already registered' },
@@ -121,7 +118,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate password strength
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
     if (!passwordRegex.test(password)) {
       return NextResponse.json(
@@ -130,7 +126,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Insert new student
+    //-------------------------------------This is for  Insert new student--------------------------------------------
     const { data: student, error: profileError } = await supabase
       .from('students')
       .insert([

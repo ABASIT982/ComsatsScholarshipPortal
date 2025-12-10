@@ -95,12 +95,12 @@ export async function PATCH(
       );
     }
 
-    // Update application status - REMOVE updated_at if it doesn't exist
+//-------------------------This is for Update application status - REMOVE updated_at if it doesn't exist-----------------------
     const { data: application, error } = await supabase
       .from('scholarship_applications')
       .update({ 
         status: status
-        // Remove updated_at if column doesn't exist
+        //-----------------------------This is for Remove updated_at if column doesn't exist-----------------------------------
       })
       .eq('id', id)
       .select()
