@@ -6,7 +6,6 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-//--------------This is for GET: List all scholarships (for admin) or active scholarships (for students)----------------------
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -15,7 +14,6 @@ export async function GET(request: NextRequest) {
     let query = supabase.from('scholarships').select('*');
 
     if (forStudent) {
-      //----------------------This is for Students only see active scholarships---------------------------
       query = query.eq('status', 'active');
     }
 
@@ -33,7 +31,6 @@ export async function GET(request: NextRequest) {
   }
 }
 
-//---------------------------This is for POST: Create new scholarship (admin only) - UPDATED---------------------------------
 export async function POST(request: NextRequest) {
   try {
     const { 
@@ -42,11 +39,11 @@ export async function POST(request: NextRequest) {
       deadline, 
       status = 'active',
       student_types = ['undergraduate'], 
-      form_template = 'basic', 
-      custom_fields = [] 
+      form_template = 'custom',
+      custom_fields = [],
+      number_of_awards = 0
     } = await request.json();
 
-    //--------------------------This is for Validate required fields-------------------------------
     if (!title || !description || !deadline) {
       return NextResponse.json(
         { error: 'Title, description, and deadline are required' },
@@ -54,7 +51,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    //----------------------------This is for Validate deadline is in future-----------------------------------
     const deadlineDate = new Date(deadline);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -66,7 +62,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    //----------------------------This is for NEW: Validate student types------------------------------
     if (!Array.isArray(student_types) || student_types.length === 0) {
       return NextResponse.json(
         { error: 'At least one student type must be selected' },
@@ -74,28 +69,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    //------------------------This is for NEW: Validate form template---------------------------
-    const validTemplates = ['basic', 'academic', 'research', 'financial', 'detailed', 'custom'];
-    if (!validTemplates.includes(form_template)) {
-      return NextResponse.json(
-        { error: 'Invalid form template selected' },
-        { status: 400 }
-      );
-    }
-
-    //-----------------------This is for NEW: Prepare scholarship data with form configuration-------------------------------
     const scholarshipData = {
       title: title.trim(),
       description: description.trim(),
       deadline,
       status,
       student_types, 
-      form_template, 
-      custom_fields: form_template === 'custom' ? custom_fields : [], // NEW: Store custom fields only if custom template
+      form_template: 'custom',
+      custom_fields: custom_fields,
+      number_of_awards: number_of_awards,
       created_by: null
     };
 
-    //----------------------------This is for Create scholarship with form configuration---------------------------------
     const { data, error } = await supabase
       .from('scholarships')
       .insert([scholarshipData])
@@ -109,8 +94,7 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    //----------------This is for NEW: If custom template, also save fields to scholarship_form_fields table------------------
-    if (form_template === 'custom' && custom_fields.length > 0) {
+    if (custom_fields.length > 0) {
       const formFieldsData = custom_fields.map((field: any, index: number) => ({
         scholarship_id: data.id,
         field_type: field.type,
@@ -129,7 +113,6 @@ export async function POST(request: NextRequest) {
 
       if (fieldsError) {
         console.error('Error saving custom form fields:', fieldsError);
-        console.warn('Scholarship created but custom fields failed to save');
       }
     }
 
@@ -144,7 +127,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-//------------------------------This is for NEW: PUT - Update scholarship----------------------------------
+// ✅ FIXED PUT METHOD WITH SCORING CRITERIA
 export async function PUT(request: NextRequest) {
   try {
     const { 
@@ -155,7 +138,9 @@ export async function PUT(request: NextRequest) {
       status,
       student_types,
       form_template,
-      custom_fields = []
+      custom_fields = [],
+      scoring_criteria,
+      number_of_awards
     } = await request.json();
 
     if (!id) {
@@ -174,6 +159,9 @@ export async function PUT(request: NextRequest) {
     } else {
       updateData.custom_fields = [];
     }
+    // ✅ ADD THESE TWO LINES
+    if (scoring_criteria !== undefined) updateData.scoring_criteria = scoring_criteria;
+    if (number_of_awards !== undefined) updateData.number_of_awards = number_of_awards;
 
     const { data, error } = await supabase
       .from('scholarships')
@@ -189,15 +177,12 @@ export async function PUT(request: NextRequest) {
       }, { status: 500 });
     }
 
-    //---------------------------------This is for Update form fields if custom template------------------------------
     if (form_template === 'custom' && custom_fields.length > 0) {
-      //-----------------------------This is for First delete existing fields-----------------------------------
       await supabase
         .from('scholarship_form_fields')
         .delete()
         .eq('scholarship_id', id);
 
-      //-------------------------This is for Then insert new fields---------------------------
       const formFieldsData = custom_fields.map((field: any, index: number) => ({
         scholarship_id: id,
         field_type: field.type,
@@ -218,7 +203,6 @@ export async function PUT(request: NextRequest) {
         console.error('Error updating custom form fields:', fieldsError);
       }
     } else if (form_template !== 'custom') {
-      //-----------------------This is for Delete custom fields if switching from custom to template-------------------------
       await supabase
         .from('scholarship_form_fields')
         .delete()

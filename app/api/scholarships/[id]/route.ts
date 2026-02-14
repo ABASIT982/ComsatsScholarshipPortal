@@ -1,4 +1,3 @@
-// app/api/scholarships/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -24,7 +23,6 @@ export async function GET(
       );
     }
 
-    //---------------------This is for UPDATED: Fetch scholarship with ALL fields including form configuration------------------
     const { data: scholarship, error } = await supabase
       .from('scholarships')
       .select(`
@@ -48,14 +46,6 @@ export async function GET(
         { status: 404 }
       );
     }
-
-    console.log('✅ [API] Scholarship found:', scholarship.id, scholarship.title);
-    console.log('📋 [API] Form configuration:', {
-      student_types: scholarship.student_types,
-      form_template: scholarship.form_template,
-      custom_fields: scholarship.custom_fields,
-      form_fields_count: scholarship.scholarship_form_fields?.length || 0
-    });
     
     return NextResponse.json({ 
       success: true,
@@ -71,7 +61,6 @@ export async function GET(
   }
 }
 
-//-----------------------------------------This is for ADD THIS DELETE METHOD---------------------------------------------
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -79,8 +68,6 @@ export async function DELETE(
   try {
     const params = await context.params;
     const { id } = params;
-
-    console.log('🗑️ [API] Deleting scholarship:', id);
 
     if (!id || id === 'undefined') {
       return NextResponse.json(
@@ -102,8 +89,6 @@ export async function DELETE(
       );
     }
 
-    console.log('✅ [API] Scholarship deleted successfully');
-
     return NextResponse.json({
       success: true,
       message: 'Scholarship deleted successfully'
@@ -118,7 +103,7 @@ export async function DELETE(
   }
 }
 
-//-------------------------This is for UPDATED: Edit method to handle form configuration-------------------------------
+// ✅ FIXED PUT METHOD WITH SCORING CRITERIA
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -133,10 +118,13 @@ export async function PUT(
       status,
       student_types,
       form_template,
-      custom_fields = []
+      custom_fields = [],
+      scoring_criteria,
+      number_of_awards
     } = await request.json();
 
     console.log('✏️ [API] Updating scholarship:', id);
+    console.log('📊 [API] Scoring criteria received:', scoring_criteria);
 
     if (!id || id === 'undefined') {
       return NextResponse.json(
@@ -145,7 +133,6 @@ export async function PUT(
       );
     }
 
-    //-----------------------------------This is for Validate required fields---------------------------------------
     if (!title?.trim() || !description?.trim() || !deadline) {
       return NextResponse.json(
         { error: 'Title, description, and deadline are required' },
@@ -153,21 +140,20 @@ export async function PUT(
       );
     }
 
-    //-------------------------This is for UPDATED: Prepare update data with form configuration-----------------------------
+    // ✅ PREPARE UPDATE DATA WITH ALL FIELDS
     const updateData: any = {
       title,
       description,
       deadline,
       status,
+      student_types,
+      form_template,
+      custom_fields: form_template === 'custom' ? custom_fields : [],
+      scoring_criteria: scoring_criteria || [],
+      number_of_awards: number_of_awards || 0,
       updated_at: new Date().toISOString()
     };
 
-    //---------------------------This is for Add form configuration if provided-------------------------------------
-    if (student_types !== undefined) updateData.student_types = student_types;
-    if (form_template !== undefined) updateData.form_template = form_template;
-    if (custom_fields !== undefined) updateData.custom_fields = form_template === 'custom' ? custom_fields : [];
-
-    //--------------------------------This is for Update the scholarship--------------------------------------
     const { data: scholarship, error } = await supabase
       .from('scholarships')
       .update(updateData)
@@ -190,15 +176,13 @@ export async function PUT(
       );
     }
 
-    //--------------------------This is for UPDATED: Handle custom form fields if template is custom--------------------------
+    // Handle custom form fields
     if (form_template === 'custom' && custom_fields.length > 0) {
-      //---------------------------------This is for Delete existing custom fields-----------------------------------
       await supabase
         .from('scholarship_form_fields')
         .delete()
         .eq('scholarship_id', id);
 
-      //-------------------------This is for Insert new custom fields---------------------------------
       const formFieldsData = custom_fields.map((field: any, index: number) => ({
         scholarship_id: id,
         field_type: field.type,
@@ -219,14 +203,13 @@ export async function PUT(
         console.error('❌ [API] Error saving custom fields:', fieldsError);
       }
     } else if (form_template !== 'custom') {
-      //------------------------This is for Delete custom fields if switching from custom to template--------------------------
       await supabase
         .from('scholarship_form_fields')
         .delete()
         .eq('scholarship_id', id);
     }
 
-    console.log('✅ [API] Scholarship updated:', scholarship.id);
+    console.log('✅ [API] Scholarship updated with criteria:', scholarship.scoring_criteria);
 
     return NextResponse.json({
       success: true,
