@@ -12,7 +12,8 @@ import {
   Eye,
   Filter,
   Search,
-  RefreshCw
+  RefreshCw,
+  Printer
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
@@ -77,7 +78,25 @@ export default function MeritListDetailPage() {
         .order('rank', { ascending: true });
 
       if (meritError) throw meritError;
-      setMeritList(meritData || []);
+
+      // Get student names from applications
+      const meritWithNames = await Promise.all(
+        (meritData || []).map(async (entry) => {
+          const { data: appData } = await supabase
+            .from('scholarship_applications')
+            .select('application_data')
+            .eq('scholarship_id', scholarshipId)
+            .eq('student_regno', entry.student_regno)
+            .maybeSingle();
+          
+          return {
+            ...entry,
+            application_data: appData?.application_data || {}
+          };
+        })
+      );
+
+      setMeritList(meritWithNames);
 
     } catch (err: any) {
       setError(err.message);
@@ -136,9 +155,10 @@ export default function MeritListDetailPage() {
   };
 
   const exportAsCSV = () => {
-    const headers = ['Rank', 'Student Reg No', 'Total Score', 'Status'];
+    const headers = ['Rank', 'Student Name', 'Reg No', 'Total Score', 'Status'];
     const rows = filteredMeritList.map(item => [
       item.rank,
+      item.application_data?.student_name || 'Unknown',
       item.student_regno,
       item.total_score,
       item.status
@@ -156,8 +176,73 @@ export default function MeritListDetailPage() {
     a.click();
   };
 
+  const printMeritList = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow pop-ups to print');
+      return;
+    }
+
+    const styles = `
+      <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        h1 { color: #333; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background: #f3f4f6; padding: 10px; text-align: left; }
+        td { padding: 10px; border-bottom: 1px solid #e5e7eb; }
+        .rank { font-weight: bold; }
+        .selected { color: #059669; }
+        .waitlist { color: #d97706; }
+        .awarded { color: #7c3aed; }
+      </style>
+    `;
+
+    const tableRows = filteredMeritList.map(item => `
+      <tr>
+        <td class="rank">${item.rank}</td>
+        <td>${item.application_data?.student_name || 'Unknown'}</td>
+        <td>${item.student_regno}</td>
+        <td>${item.total_score.toFixed(1)}</td>
+        <td class="${item.status}">${item.status}</td>
+      </tr>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Merit List - ${scholarship?.title}</title>
+          ${styles}
+        </head>
+        <body>
+          <h1>${scholarship?.title}</h1>
+          <p>Generated: ${new Date().toLocaleDateString()}</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Student Name</th>
+                <th>Reg No</th>
+                <th>Score</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    
+    printWindow.document.close();
+    printWindow.print();
+  };
+
   const filteredMeritList = meritList.filter(item => {
-    const matchesSearch = item.student_regno.toLowerCase().includes(search.toLowerCase());
+    const searchTerm = search.toLowerCase();
+    const matchesSearch = 
+      item.student_regno.toLowerCase().includes(searchTerm) ||
+      (item.application_data?.student_name || '').toLowerCase().includes(searchTerm);
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -187,8 +272,8 @@ export default function MeritListDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center gap-4 mb-6">
+        {/* Back button at the very top with proper spacing */}
+        <div className="mb-4">
           <button
             onClick={() => router.back()}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
@@ -196,29 +281,44 @@ export default function MeritListDetailPage() {
             <ArrowLeft size={20} />
             Back
           </button>
-          <div className="flex-1">
+        </div>
+
+        {/* Header moved down */}
+        <div className="flex justify-between items-center mb-6">
+          <div>
             <h1 className="text-3xl font-bold text-gray-900">Merit List</h1>
             <p className="text-gray-600 mt-2">{scholarship?.title}</p>
           </div>
           
-          {meritList.length === 0 ? (
-            <button
-              onClick={generateMeritList}
-              disabled={generating}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-            >
-              <RefreshCw size={20} className={generating ? 'animate-spin' : ''} />
-              {generating ? 'Generating...' : 'Generate Merit List'}
-            </button>
-          ) : (
-            <button
-              onClick={exportAsCSV}
-              className="bg-gray-800 text-white px-6 py-3 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2"
-            >
-              <Download size={20} />
-              Export CSV
-            </button>
-          )}
+          <div className="flex gap-3">
+            {meritList.length === 0 ? (
+              <button
+                onClick={generateMeritList}
+                disabled={generating}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+              >
+                <RefreshCw size={20} className={generating ? 'animate-spin' : ''} />
+                {generating ? 'Generating...' : 'Generate Merit List'}
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={printMeritList}
+                  className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
+                >
+                  <Printer size={20} />
+                  Print
+                </button>
+                <button
+                  onClick={exportAsCSV}
+                  className="bg-gray-800 text-white px-6 py-3 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2"
+                >
+                  <Download size={20} />
+                  Export CSV
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Error Message */}
@@ -281,7 +381,7 @@ export default function MeritListDetailPage() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
                   <input
                     type="text"
-                    placeholder="Search by registration number..."
+                    placeholder="Search by name or registration number..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -309,7 +409,8 @@ export default function MeritListDetailPage() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reg No</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Score</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
@@ -317,8 +418,8 @@ export default function MeritListDetailPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {filteredMeritList.map((entry) => (
-                    <>
-                      <tr key={entry.id} className="hover:bg-gray-50">
+                    <React.Fragment key={entry.id}>
+                      <tr className="hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <div className="flex items-center">
                             <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
@@ -333,11 +434,13 @@ export default function MeritListDetailPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div>
-                            <div className="font-medium text-gray-900">{entry.student_regno}</div>
-                            <div className="text-sm text-gray-500">
-                              {entry.application_data?.student_name || 'Student'}
-                            </div>
+                          <div className="font-medium text-gray-900">
+                            {entry.application_data?.student_name || 'Unknown Student'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm text-gray-600">
+                            {entry.student_regno}
                           </div>
                         </td>
                         <td className="px-6 py-4">
@@ -377,7 +480,7 @@ export default function MeritListDetailPage() {
                       {/* Expanded Row - Score Breakdown */}
                       {expandedRow === entry.id && (
                         <tr>
-                          <td colSpan={5} className="px-6 py-4 bg-blue-50">
+                          <td colSpan={6} className="px-6 py-4 bg-blue-50">
                             <div className="p-4 bg-white rounded-lg shadow-inner">
                               <h4 className="font-semibold mb-3">Score Breakdown</h4>
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -394,7 +497,7 @@ export default function MeritListDetailPage() {
                           </td>
                         </tr>
                       )}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
