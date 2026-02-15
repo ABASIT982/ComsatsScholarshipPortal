@@ -76,6 +76,18 @@ export async function DELETE(
       );
     }
 
+    // ✅ STEP 1: Delete all form fields for this scholarship FIRST
+    const { error: fieldsError } = await supabase
+      .from('scholarship_form_fields')
+      .delete()
+      .eq('scholarship_id', id);
+
+    if (fieldsError) {
+      console.error('❌ [API] Error deleting form fields:', fieldsError);
+      // Continue anyway, try to delete scholarship
+    }
+
+    // ✅ STEP 2: Then delete the scholarship
     const { error } = await supabase
       .from('scholarships')
       .delete()
@@ -91,7 +103,7 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: 'Scholarship deleted successfully'
+      message: 'Scholarship and related form fields deleted successfully'
     });
 
   } catch (error: unknown) {
