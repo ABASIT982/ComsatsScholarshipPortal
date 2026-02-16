@@ -75,7 +75,7 @@ export default function Footer() {
       <div className="border-t border-cyan-400/20 mt-12 pt-6 text-center text-sm text-blue-300">
         <p>
           Copyright © {new Date().getFullYear()} All rights reserved | 
-          Made with 💙 by <a href="https://colorlib.com" target="_blank" className="text-cyan-300 hover:underline">Colorlib.com</a>
+          Made with 💙 by <a href="https://github.com/ABASIT982" target="_blank" className="text-cyan-300 hover:underline">Abdul Basit</a>
         </p>
         <div className="mt-2 space-x-4">
           <a href="#" className="hover:text-cyan-300">Terms</a>

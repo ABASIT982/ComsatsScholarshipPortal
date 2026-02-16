@@ -58,14 +58,17 @@ export default function Scholarships() {
       className="py-24 bg-gradient-to-b from-blue-950 via-indigo-950 to-blue-950 text-white"
     >
       <div className="max-w-7xl mx-auto px-6 text-center">
-        <motion.h2
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-4xl md:text-5xl font-bold text-cyan-300 mb-4 text-left"
-        >
-          Explore Available Scholarships
-        </motion.h2>
+       <motion.h2
+  initial={{ opacity: 0, y: 30 }}
+  whileInView={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.6 }}
+  className="text-4xl md:text-5xl font-bold text-cyan-300 mb-4 text-left"
+>
+  <a href="/login">
+    Explore Available Scholarships
+  </a>
+</motion.h2>
+
 
         <motion.p
           initial={{ opacity: 0 }}
@@ -127,9 +130,12 @@ export default function Scholarships() {
             scholarships, check eligibility, and apply directly online.
             Applications are reviewed by the scholarship committee each semester.
           </p>
-          <button className="mt-2 bg-gradient-to-r from-blue-500 to-cyan-400 text-blue-950 font-semibold px-6 py-2 rounded-full shadow-lg hover:opacity-90 transition">
-            View All Scholarships
-          </button>
+          <a href="/login">
+  <button  className="mt-2 bg-gradient-to-r from-blue-500 to-cyan-400 text-blue-950 font-semibold px-6 py-2 rounded-full shadow-lg hover:opacity-90 transition">
+    View All Scholarships
+  </button>
+</a>
+
         </motion.div>
 
         <motion.div
