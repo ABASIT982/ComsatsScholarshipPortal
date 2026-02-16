@@ -298,10 +298,10 @@ const downloadMeritList = async (scholarshipId: string, title: string) => {
 
         {/* Congratulations Banner */}
         {stats.selected > 0 && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-6">
+          <div className="mb-6 bg-green-200 border border-green-200 rounded-xl p-6">
             <div className="flex items-center gap-3 mb-3">
               <CheckCircle className="w-6 h-6 text-green-600" />
-              <h3 className="text-lg font-semibold text-green-800">Congratulations! 🎉</h3>
+              <h3 className="text-lg font-semibold text-green-800">Congratulations!</h3>
             </div>
             <p className="text-green-700">
               You have been selected for {stats.selected} scholarship{stats.selected > 1 ? 's' : ''}. 

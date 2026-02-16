@@ -50,9 +50,9 @@ const menuItems: (MenuItem | MenuItemWithSubmenu)[] = [
     icon: BarChart3,
     submenu: [
       { name: 'All Lists', href: '/admin/merit/lists', icon: List },
-      { name: 'Set Criteria', href: '/admin/merit/criteria', icon: Calculator },
-      { name: 'Calculate Scores', href: '/admin/merit/calculate', icon: Calculator },
-      { name: 'Allocate', href: '/admin/merit/allocate', icon: DollarSign },
+      // { name: 'Set Criteria', href: '/admin/merit/criteria', icon: Calculator },
+      // { name: 'Calculate Scores', href: '/admin/merit/calculate', icon: Calculator },
+      // { name: 'Allocate', href: '/admin/merit/allocate', icon: DollarSign },
       { name: 'Reports', href: '/admin/merit/reports', icon: FileText },
     ]
   },
