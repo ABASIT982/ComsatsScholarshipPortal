@@ -50,6 +50,14 @@ login({
       //---------------------------This is for STORE ADDITIONAL ADMIN DAT------------------------------------------
       localStorage.setItem("adminToken", data.token);
       localStorage.setItem("admin", JSON.stringify(data.admin));
+
+      // ✅ FIX: Store admin ID separately with the CORRECT UUID from database
+if (data.admin?.id) {
+  localStorage.setItem("adminId", data.admin.id);
+} else {
+  // Fallback to your known UUID if API doesn't return id
+  localStorage.setItem("adminId", "97bca663-9121-48c4-82c7-b76a03c25ec6");
+}
       
       setError("");
       router.push("/admin/dashboard");

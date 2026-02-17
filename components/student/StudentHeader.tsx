@@ -3,6 +3,8 @@ import { Bell, User, Settings, LogOut } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../app/contexts/AuthContext'
+import NotificationBell from '@/components/NotificationBell';
+
 
 export function StudentHeader() {
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -61,10 +63,11 @@ export function StudentHeader() {
         {/* Right Section */}
         <div className="flex items-center gap-2 lg:gap-4 flex-shrink-0">
           {/* Notifications */}
-          <button className="relative p-2 lg:p-3 text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all duration-200 border border-transparent hover:border-blue-100">
-            <Bell className="w-4 h-4 lg:w-5 lg:h-5" />
-            <span className="absolute top-1 right-1 lg:top-2 lg:right-2 w-2 h-2 lg:w-2.5 lg:h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-          </button>
+{/* Notifications */}
+<div className="flex items-center gap-4">
+  <NotificationBell userId={currentRegno} userType="student" />
+  {/* other nav items */}
+</div>
 
           {/* User Profile with Dropdown */}
           <div className="relative">

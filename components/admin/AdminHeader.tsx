@@ -3,16 +3,25 @@ import { Bell, User, Settings, LogOut } from 'lucide-react'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../app/contexts/AuthContext'
+import NotificationBell from '@/components/NotificationBell';
 
 export function AdminHeader() {
   const [showUserMenu, setShowUserMenu] = useState(false)
   const router = useRouter()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
 
   const handleSignOut = () => {
     logout();
     router.push('/admin/login')
   }
+
+  // For admin, we don't have an ID in the user object
+  // So we need to get it from localStorage
+ // Get admin ID from localStorage
+const getAdminId = () => {
+  return localStorage.getItem('adminId') || '97bca663-9121-48c4-82c7-b76a03c25ec6';
+  
+};
 
   return (
     <header className="w-full bg-white/90 backdrop-blur-md border-b border-gray-200/80 px-6 py-4">
@@ -21,11 +30,10 @@ export function AdminHeader() {
         {/* Right Section */}
         <div className="flex items-center gap-4">
           
-          {/* Notifications */}
-          <button className="relative p-3 text-gray-500 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all duration-200 border border-transparent hover:border-blue-100">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-2 right-2 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white"></span>
-          </button>
+          {/* Notifications - Use the admin ID */}
+          <div className="flex items-center gap-4">
+            <NotificationBell userId={getAdminId()} userType="admin" />
+          </div>
 
           {/* User Profile with Dropdown */}
           <div className="relative">
@@ -37,8 +45,12 @@ export function AdminHeader() {
                 <User className="w-5 h-5 text-white" />
               </div>
               <div className="hidden lg:block text-left">
-                <p className="text-sm font-semibold text-gray-900">Administrator</p>
-                <p className="text-xs text-gray-500">Super Admin</p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {user?.name || 'Administrator'}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Admin
+                </p>
               </div>
             </button>
 
@@ -46,8 +58,12 @@ export function AdminHeader() {
             {showUserMenu && (
               <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-200 py-2 z-50 backdrop-blur-sm">
                 <div className="px-4 py-3 border-b border-gray-100 bg-blue-50/50 rounded-t-xl">
-                  <p className="text-sm font-semibold text-gray-900">Administrator</p>
-                  <p className="text-xs text-gray-500 mt-1">admin@scholarship.edu</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {user?.name || 'Administrator'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {user?.email || 'admin@scholarship.edu'}
+                  </p>
                 </div>
                 
                 <div className="py-1">

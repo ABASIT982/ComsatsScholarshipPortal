@@ -11,6 +11,7 @@ import {
   Settings,
   Menu,
   X,
+  Bell,
   LogOut,
   BarChart3,
   Globe
@@ -24,6 +25,7 @@ const menuItems = [
   { name: 'Scholarships', href: '/student/scholarships', icon: Award },
   { name: 'Applications', href: '/student/applications', icon: FileText },
   { name: 'Merit List', href: '/student/merit-list', icon: BarChart3 },
+  { name: 'Notifications', href: '/student/notifications', icon: Bell },
   { name: 'Settings', href: '/student/settings', icon: Settings },
 ]
 

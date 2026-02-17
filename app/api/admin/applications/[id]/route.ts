@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createNotification } from '@/lib/notifications'; // ADD THIS IMPORT
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -103,7 +104,12 @@ export async function PATCH(
         //-----------------------------This is for Remove updated_at if column doesn't exist-----------------------------------
       })
       .eq('id', id)
-      .select()
+      .select(`
+        *,
+        scholarships (
+          title
+        )
+      `)
       .single();
 
     if (error) {
@@ -122,6 +128,46 @@ export async function PATCH(
     }
 
     console.log('✅ [ADMIN API] Application updated:', application.id);
+
+    // ✅ ADD NOTIFICATIONS HERE - AFTER SUCCESSFUL UPDATE
+    try {
+      const studentName = application.application_data?.student_name || application.student_regno;
+      const scholarshipTitle = application.scholarships?.title || 'Scholarship';
+      
+      if (status === 'approved') {
+        await createNotification({
+          userId: application.student_regno,
+          userType: 'student',
+          type: 'application_approved',
+          title: '✅ Application Approved',
+          message: `Congratulations! Your application for "${scholarshipTitle}" has been approved.`,
+          data: { 
+            applicationId: application.id,
+            scholarshipId: application.scholarship_id,
+            scholarshipTitle: scholarshipTitle
+          }
+        });
+        console.log('✅ [ADMIN API] Approval notification sent to student');
+      } 
+      else if (status === 'rejected') {
+        await createNotification({
+          userId: application.student_regno,
+          userType: 'student',
+          type: 'application_rejected',
+          title: '📝 Application Update',
+          message: `Your application for "${scholarshipTitle}" has been reviewed. Please check your status.`,
+          data: { 
+            applicationId: application.id,
+            scholarshipId: application.scholarship_id,
+            scholarshipTitle: scholarshipTitle
+          }
+        });
+        console.log('✅ [ADMIN API] Rejection notification sent to student');
+      }
+    } catch (notifError) {
+      // Don't fail the request if notifications fail
+      console.error('⚠️ [ADMIN API] Notification error:', notifError);
+    }
 
     return NextResponse.json({
       application,

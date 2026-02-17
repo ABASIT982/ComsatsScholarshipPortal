@@ -10,9 +10,9 @@ import {
   UserCheck, 
   UserX, 
   Mail,
-  FileText,
   ArrowLeft,
-  Users
+  Filter,
+  ChevronDown
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 
@@ -31,24 +31,27 @@ interface Notification {
   created_at: string;
 }
 
-export default function AdminNotificationsPage() {
+export default function StudentNotificationsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<'all' | 'unread' | 'read'>('all');
-  const [adminId, setAdminId] = useState('');
+  const [studentRegNo, setStudentRegNo] = useState('');
 
   useEffect(() => {
-    // Get admin ID from localStorage or context
-    const id = localStorage.getItem('adminId') || 'admin-1'; // Replace with actual admin ID
-    setAdminId(id);
-    fetchNotifications(id);
+    const regNo = localStorage.getItem('studentRegno');
+    if (!regNo) {
+      router.push('/student/login');
+      return;
+    }
+    setStudentRegNo(regNo);
+    fetchNotifications(regNo);
   }, []);
 
-  const fetchNotifications = async (id: string) => {
+  const fetchNotifications = async (regNo: string) => {
     setLoading(true);
     try {
-      const response = await fetch(`/api/notifications?userId=${id}&userType=admin&limit=100`);
+      const response = await fetch(`/api/notifications?userId=${regNo}&userType=student&limit=100`);
       const data = await response.json();
       
       if (data.success) {
@@ -86,7 +89,7 @@ export default function AdminNotificationsPage() {
       const response = await fetch('/api/notifications/read', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ markAll: true, userId: adminId, userType: 'admin' })
+        body: JSON.stringify({ markAll: true, userId: studentRegNo, userType: 'student' })
       });
 
       if (response.ok) {
@@ -131,15 +134,14 @@ export default function AdminNotificationsPage() {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
-      case 'application_submitted':
-        return <FileText className="w-5 h-5 text-blue-500" />;
       case 'application_approved':
-      case 'application_rejected':
         return <UserCheck className="w-5 h-5 text-green-500" />;
-      case 'merit_generated':
+      case 'application_rejected':
+        return <UserX className="w-5 h-5 text-red-500" />;
+      case 'application_submitted':
+        return <Mail className="w-5 h-5 text-blue-500" />;
+      case 'merit_selected':
         return <Award className="w-5 h-5 text-yellow-500" />;
-      case 'new_student':
-        return <Users className="w-5 h-5 text-purple-500" />;
       default:
         return <Bell className="w-5 h-5 text-gray-500" />;
     }
@@ -167,22 +169,6 @@ export default function AdminNotificationsPage() {
     });
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    // Mark as read
-    if (!notification.is_read) {
-      markAsRead([notification.id]);
-    }
-
-    // Navigate based on data
-    if (notification.data?.applicationId) {
-      router.push(`/admin/applications/${notification.data.applicationId}`);
-    } else if (notification.data?.scholarshipId) {
-      router.push(`/admin/merit/${notification.data.scholarshipId}`);
-    } else if (notification.data?.studentRegno) {
-      router.push(`/admin/students/${notification.data.studentRegno}`);
-    }
-  };
-
   const filteredNotifications = notifications.filter(n => {
     if (filter === 'unread') return !n.is_read;
     if (filter === 'read') return n.is_read;
@@ -203,8 +189,8 @@ export default function AdminNotificationsPage() {
             <ArrowLeft size={20} className="text-gray-600" />
           </button>
           <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Admin Notifications</h1>
-            <p className="text-gray-600 mt-1">Stay updated with student applications and system events</p>
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Notifications</h1>
+            <p className="text-gray-600 mt-1">Stay updated with your scholarship journey</p>
           </div>
         </div>
 
@@ -270,8 +256,7 @@ export default function AdminNotificationsPage() {
             {filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
-                onClick={() => handleNotificationClick(notification)}
-                className={`bg-white rounded-xl shadow-sm p-4 transition-all hover:shadow-md cursor-pointer ${
+                className={`bg-white rounded-xl shadow-sm p-4 transition-all hover:shadow-md ${
                   !notification.is_read ? 'border-l-4 border-blue-500' : ''
                 }`}
               >
@@ -300,7 +285,7 @@ export default function AdminNotificationsPage() {
                       </div>
                       
                       {/* Actions */}
-                      <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex items-center gap-2">
                         {!notification.is_read && (
                           <button
                             onClick={() => markAsRead([notification.id])}
@@ -319,22 +304,6 @@ export default function AdminNotificationsPage() {
                         </button>
                       </div>
                     </div>
-
-                    {/* Preview Data */}
-                    {notification.data && (
-                      <div className="mt-2 flex gap-2">
-                        {notification.data.studentRegno && (
-                          <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                            Student: {notification.data.studentRegno}
-                          </span>
-                        )}
-                        {notification.data.scholarshipTitle && (
-                          <span className="text-xs bg-gray-100 px-2 py-1 rounded">
-                            {notification.data.scholarshipTitle}
-                          </span>
-                        )}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>

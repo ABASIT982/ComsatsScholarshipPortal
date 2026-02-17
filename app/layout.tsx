@@ -5,6 +5,8 @@ import "./globals.css";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { AuthProvider } from './contexts/AuthContext';
+import { Toaster } from 'react-hot-toast';
+
 
 // ✅ APPROACH: Use Head component for metadata in Client Component
 import Head from "next/head";
@@ -38,6 +40,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           {/* Hide footer on admin/student panels */}
           {!hideNavbarFooter && <Footer />}
         </AuthProvider>
+                <Toaster position="top-right" />
+
       </body>
     </html>
   );

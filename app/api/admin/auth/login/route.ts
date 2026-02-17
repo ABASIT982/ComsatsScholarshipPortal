@@ -5,14 +5,14 @@ export async function POST(request: Request) {
   try {
     const { email, password } = await request.json()
 
-    console.log('🔐 Login attempt:', { email, password })
+    console.log('🔐 Login attempt:', { email })
 
     //------------------------------This is for TEMPORARY: Hardcoded admin for testing----------------------------------------
     if (email === 'admin@comsats.edu.pk' && password === 'admin123') {
       return NextResponse.json({
         message: 'Admin login successful',
         admin: {
-          id: 'admin-001',
+          id: '97bca663-9121-48c4-82c7-b76a03c25ec6',  // ✅ FIXED: Use real UUID
           email: 'admin@comsats.edu.pk',
           full_name: 'System Administrator',
           role: 'super_admin',
