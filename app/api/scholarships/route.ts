@@ -116,6 +116,53 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ✅ ADD NOTIFICATIONS HERE - YOUR EXISTING CODE ABOVE IS UNCHANGED
+    try {
+      console.log('📢 Starting notification process for new scholarship...');
+      
+      // Get all students using 'regno' column
+      const { data: students, error: studentsError } = await supabase
+        .from('students')
+        .select('regno');
+
+      if (studentsError) {
+        console.error('❌ Error fetching students:', studentsError);
+      } else {
+        console.log(`📢 Found ${students?.length || 0} students`);
+        
+        if (students && students.length > 0) {
+          const notifications = students.map(student => ({
+            user_id: student.regno,
+            user_type: 'student',
+            type: 'new_scholarship',
+            title: '🎓 New Scholarship Available',
+            message: `"${data.title}" is now open for applications. Apply before ${new Date(deadline).toLocaleDateString()}!`,
+            data: {
+              scholarshipId: data.id,
+              scholarshipTitle: data.title,
+              deadline: deadline
+            },
+            is_read: false,
+            created_at: new Date().toISOString()
+          }));
+
+          console.log(`📢 Creating ${notifications.length} notifications`);
+          
+          const { error: notifError } = await supabase
+            .from('notifications')
+            .insert(notifications);
+
+          if (notifError) {
+            console.error('❌ Error inserting notifications:', notifError);
+          } else {
+            console.log(`✅ Successfully sent notifications to ${students.length} students`);
+          }
+        }
+      }
+    } catch (notifError) {
+      console.error('❌ Notification error:', notifError);
+    }
+
     return NextResponse.json({ 
       scholarship: data, 
       message: 'Scholarship created successfully' 

@@ -183,17 +183,31 @@ const handleNotificationClick = (notification: Notification) => {
     markAsRead([notification.id]);
   }
   
-  // PRIORITY 1: If there's an applicationId, go to application page
-  if (notification.data?.applicationId) {
-    // Student goes to their application status page
+  // PRIORITY 1: Merit list notifications go to main merit list page
+  if (notification.type === 'merit_generated') {
+    if (userType === 'student') {
+      router.push('/student/merit-list');  // Goes to the main merit list page
+    } else {
+      router.push('/admin/merit');  // Goes to admin merit list page
+    }
+  }
+  // PRIORITY 2: New scholarship notifications go to scholarships page
+  else if (notification.type === 'new_scholarship' && notification.data?.scholarshipId) {
+    if (userType === 'student') {
+      router.push('/student/scholarships');
+    } else {
+      router.push('/admin/scholarships');
+    }
+  }
+  // PRIORITY 3: If there's an applicationId, go to application page
+  else if (notification.data?.applicationId) {
     if (userType === 'student') {
       router.push(`/student/applications?id=${notification.data.applicationId}`);
     } else {
-      // Admin goes to admin application view
       router.push(`/admin/applications/${notification.data.applicationId}`);
     }
   }
-  // PRIORITY 2: If there's only scholarshipId (no applicationId), then go to merit list
+  // PRIORITY 4: If there's only scholarshipId, go to merit list (fallback)
   else if (notification.data?.scholarshipId) {
     router.push(userType === 'student' 
       ? `/student/merit-list/${notification.data.scholarshipId}`

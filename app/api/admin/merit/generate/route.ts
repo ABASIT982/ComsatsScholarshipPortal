@@ -84,32 +84,31 @@ export async function POST(request: NextRequest) {
       const breakdown: Record<string, number> = {};
 
       // Calculate weighted score for each criterion
-// Calculate weighted score for each criterion
-for (const criterion of criteria) {
-  // Get field value from application_data
-  let fieldValue = 0;
-  
-  // Handle different field types
-  const rawValue = applicationData[criterion.fieldName];
-  
-  if (rawValue) {
-    // If it's a number, parse it
-    if (typeof rawValue === 'number') {
-      fieldValue = rawValue;
-    } else if (typeof rawValue === 'string') {
-      // Try to parse as number, remove commas if any
-      const cleanedValue = rawValue.replace(/,/g, '');
-      fieldValue = parseFloat(cleanedValue) || 0;
-    }
-  }
+      for (const criterion of criteria) {
+        // Get field value from application_data
+        let fieldValue = 0;
+        
+        // Handle different field types
+        const rawValue = applicationData[criterion.fieldName];
+        
+        if (rawValue) {
+          // If it's a number, parse it
+          if (typeof rawValue === 'number') {
+            fieldValue = rawValue;
+          } else if (typeof rawValue === 'string') {
+            // Try to parse as number, remove commas if any
+            const cleanedValue = rawValue.replace(/,/g, '');
+            fieldValue = parseFloat(cleanedValue) || 0;
+          }
+        }
 
-  // Calculate weighted score
-  const weightedScore = (fieldValue * criterion.weight) / 100;
-  totalScore += weightedScore;
-  
-  // Store breakdown - store as number, not object
-  breakdown[criterion.fieldName] = weightedScore;
-}
+        // Calculate weighted score
+        const weightedScore = (fieldValue * criterion.weight) / 100;
+        totalScore += weightedScore;
+        
+        // Store breakdown
+        breakdown[criterion.fieldName] = weightedScore;
+      }
 
       scoredApplications.push({
         application_id: app.id,
@@ -191,6 +190,56 @@ for (const criterion of criteria) {
     }
 
     console.log('✅ [MERIT API] Merit list generated successfully');
+
+    // ✅ ADD NOTIFICATIONS HERE - STUDENTS GET NOTIFIED ABOUT MERIT LIST
+    try {
+      console.log('📢 [MERIT API] Sending merit list notifications to students...');
+      
+      // Get scholarship title for the message
+      const scholarshipTitle = scholarship.title;
+      
+      // Get all students who have entries in the merit list
+      const { data: meritStudents, error: meritError } = await supabase
+        .from('merit_lists')
+        .select('student_regno, status, rank')
+        .eq('scholarship_id', scholarshipId);
+
+      if (meritError) {
+        console.error('❌ [MERIT API] Error fetching merit students:', meritError);
+      } else if (meritStudents && meritStudents.length > 0) {
+        console.log(`📢 [MERIT API] Found ${meritStudents.length} students in merit list`);
+        
+        const notifications = meritStudents.map(student => ({
+          user_id: student.student_regno,
+          user_type: 'student',
+          type: 'merit_generated',
+          title: student.status === 'selected' ? '🎉 Congratulations! You are Selected' : '📋 Merit List Published',
+          message: student.status === 'selected' 
+            ? `You have been selected for "${scholarshipTitle}"! Check your merit list details.`
+            : `Merit list for "${scholarshipTitle}" has been published. Check your status.`,
+          data: {
+            scholarshipId: scholarshipId,
+            scholarshipTitle: scholarshipTitle,
+            status: student.status,
+            rank: student.rank
+          },
+          is_read: false,
+          created_at: new Date().toISOString()
+        }));
+
+        const { error: notifError } = await supabase
+          .from('notifications')
+          .insert(notifications);
+
+        if (notifError) {
+          console.error('❌ [MERIT API] Error sending notifications:', notifError);
+        } else {
+          console.log(`✅ [MERIT API] Sent notifications to ${meritStudents.length} students`);
+        }
+      }
+    } catch (notifError) {
+      console.error('❌ [MERIT API] Notification error:', notifError);
+    }
 
     // 10. Return summary
     return NextResponse.json({
