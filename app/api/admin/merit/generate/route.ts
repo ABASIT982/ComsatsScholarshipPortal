@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendSelectionEmailJS } from '@/lib/emailjs';  // ← ADD THIS LINE
+import emailjs from '@emailjs/nodejs';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -240,6 +242,48 @@ export async function POST(request: NextRequest) {
     } catch (notifError) {
       console.error('❌ [MERIT API] Notification error:', notifError);
     }
+
+// ✅ ADD EMAILS FOR SELECTED STUDENTS
+// ✅ SEND EMAILS USING EMAILJS
+try {
+  console.log('📧 [MERIT API] Sending emails to selected students...');
+  
+  const selectedStudents = meritEntries.filter(entry => entry.status === 'selected');
+  
+  for (const student of selectedStudents) {
+    // Get student email from profiles table
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('email, full_name')
+      .eq('regno', student.student_regno)
+      .single();
+    
+    const studentEmail = profile?.email;
+    const studentName = profile?.full_name || student.student_regno;
+    
+    if (studentEmail) {
+      console.log(`📧 Sending email to ${studentName} (${studentEmail}) - Rank #${student.rank}`);
+      
+      const result = await sendSelectionEmailJS({
+        to_email: studentEmail,
+        student_name: studentName,
+        scholarship_title: scholarship.title,
+        rank: student.rank
+      });
+      
+      if (result.success) {
+        console.log(`✅ Email sent to ${studentEmail}`);
+      } else {
+        console.error(`❌ Failed to send email to ${studentEmail}`);
+      }
+    }
+  }
+  
+  console.log(`📧 Completed sending ${selectedStudents.length} emails`);
+  
+} catch (emailError) {
+  console.error('❌ Email error:', emailError);
+}
 
     // 10. Return summary
     return NextResponse.json({
