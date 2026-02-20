@@ -14,6 +14,7 @@ export function StudentFilters({ onFiltersChange, loading = false }: StudentFilt
     department: 'all',
     level: 'all'
   })
+  
 
   const handleFilterChange = (key: string, value: string) => {
     const newFilters = { ...filters, [key]: value }
