@@ -1,0 +1,50 @@
+{
+  "scholarships": [
+    {
+      "id": "merit",
+      "name": "Merit Scholarship",
+      "deadline": "May 30, 2026",
+      "criteria": "3.5 GPA minimum, 80% attendance",
+      "amount": "$5000 per semester",
+      "details_url": "/student/scholarships/merit"
+    },
+    {
+      "id": "need_based",
+      "name": "Need-Based Scholarship",
+      "deadline": "June 15, 2026",
+      "criteria": "Family income < $50,000, 2.5 GPA minimum",
+      "amount": "$3000 per semester",
+      "details_url": "/student/scholarships/need-based"
+    },
+    {
+      "id": "sports",
+      "name": "Sports Scholarship",
+      "deadline": "April 20, 2026",
+      "criteria": "University team member, 70% attendance",
+      "amount": "$2000 per semester",
+      "details_url": "/student/scholarships/sports"
+    }
+  ],
+  "faqs": [
+    {
+      "question": "What is the minimum GPA?",
+      "answer": "Minimum 2.0 GPA for all scholarships. Merit requires 3.5.",
+      "keywords": ["gpa", "grade", "cgpa"]
+    },
+    {
+      "question": "How to apply for scholarship?",
+      "answer": "Login → Student Dashboard → Scholarships → Click Apply",
+      "keywords": ["apply", "application", "how to apply"]
+    },
+    {
+      "question": "What documents are needed?",
+      "answer": "Transcript, CNIC, income proof (for need-based), sports certificate (for sports)",
+      "keywords": ["document", "upload", "required"]
+    }
+  ],
+  "general_responses": {
+    "deadline": "📅 Check specific scholarship deadlines on the scholarships page. Each scholarship has different dates.",
+    "criteria": "📋 Eligibility criteria varies by scholarship. Visit the scholarships section for complete details.",
+    "unknown": "I can help with scholarship deadlines, criteria, and applications. What specific scholarship are you interested in?"
+  }
+}

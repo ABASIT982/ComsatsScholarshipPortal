@@ -6,6 +6,8 @@ import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { AuthProvider } from './contexts/AuthContext';
 import { Toaster } from 'react-hot-toast';
+import Chatbot from '@/components/Chatbot';
+
 
 
 // ✅ APPROACH: Use Head component for metadata in Client Component
@@ -43,6 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <Toaster position="top-right" />
 
       </body>
+      <Chatbot />
     </html>
   );
 }
