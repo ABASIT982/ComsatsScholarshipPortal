@@ -60,7 +60,8 @@ export async function POST(request: NextRequest) {
       const documentTypes = [
         'student_cnic_front', 'student_cnic_back',
         'father_cnic_front', 'father_cnic_back', 
-        'student_card_front', 'student_card_back'
+        'student_card_front', 'student_card_back',
+        'dispute'
       ];
 
       if (!documentTypes.includes(type)) {

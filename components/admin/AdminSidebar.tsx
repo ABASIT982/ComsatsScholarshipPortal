@@ -17,7 +17,8 @@ import {
   ChevronRight,
   Calculator,
   DollarSign,
-  List
+  List,
+  AlertCircle        // ← ADD THIS
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '../../app/contexts/AuthContext'
@@ -50,14 +51,12 @@ const menuItems: (MenuItem | MenuItemWithSubmenu)[] = [
     icon: BarChart3,
     submenu: [
       { name: 'All Lists', href: '/admin/merit/lists', icon: List },
-      // { name: 'Set Criteria', href: '/admin/merit/criteria', icon: Calculator },
-      // { name: 'Calculate Scores', href: '/admin/merit/calculate', icon: Calculator },
-      // { name: 'Allocate', href: '/admin/merit/allocate', icon: DollarSign },
       { name: 'Reports', href: '/admin/merit/reports', icon: FileText },
     ]
   },
   { name: 'Notifications', href: '/admin/notifications', icon: Bell },
   { name: 'Reports', href: '/admin/reports', icon: FileText },
+  { name: 'Manage Disputes', href: '/admin/disputes', icon: AlertCircle },  
 ]
 
 export function AdminSidebar() {
