@@ -12,6 +12,7 @@ interface Student {
   cgpa?: number
   registrationDate: string
   avatar?: string
+  email?: string
 }
 
 interface StudentTableProps {
@@ -86,9 +87,6 @@ export function StudentTable({ students, loading, onViewStudent, onEditStudent }
                 Status
               </th>
               <th className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider">
-                CGPA
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider">
                 Actions
               </th>
             </tr>
@@ -126,11 +124,6 @@ export function StudentTable({ students, loading, onViewStudent, onEditStudent }
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(student.status)}`}>
                     {getStatusIcon(student.status)}
                     {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="text-sm font-medium text-gray-900">
-                    {student.cgpa ? student.cgpa.toFixed(2) : 'N/A'}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

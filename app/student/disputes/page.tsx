@@ -79,19 +79,19 @@ export default function MyDisputesPage() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-3 text-center border-l-4 border-yellow-500">
+        <div className="bg-white rounded-lg shadow p-4 text-center ">
           <p className="text-2xl font-bold text-yellow-600">{disputes.filter(d => d.status === 'pending').length}</p>
           <p className="text-xs text-gray-500">Pending</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-3 text-center border-l-4 border-blue-500">
+        <div className="bg-white rounded-lg shadow p-4 text-center ">
           <p className="text-2xl font-bold text-blue-600">{disputes.filter(d => d.status === 'reviewing').length}</p>
           <p className="text-xs text-gray-500">Under Review</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-3 text-center border-l-4 border-green-500">
+        <div className="bg-white rounded-lg shadow p-4 text-center ">
           <p className="text-2xl font-bold text-green-600">{disputes.filter(d => d.status === 'resolved').length}</p>
           <p className="text-xs text-gray-500">Resolved</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-3 text-center border-l-4 border-red-500">
+        <div className="bg-white rounded-lg shadow p-4 text-center ">
           <p className="text-2xl font-bold text-red-600">{disputes.filter(d => d.status === 'rejected').length}</p>
           <p className="text-xs text-gray-500">Rejected</p>
         </div>

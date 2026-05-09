@@ -118,19 +118,19 @@ export default function AdminDisputesPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-yellow-500">
+        <div className="bg-white rounded-lg shadow p-4 ">
           <p className="text-sm text-gray-500">Pending</p>
           <p className="text-2xl font-bold">{getStatusCount('pending')}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+        <div className="bg-white rounded-lg shadow p-4 ">
           <p className="text-sm text-gray-500">Under Review</p>
           <p className="text-2xl font-bold">{getStatusCount('reviewing')}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-green-500">
+        <div className="bg-white rounded-lg shadow p-4 ">
           <p className="text-sm text-gray-500">Resolved</p>
           <p className="text-2xl font-bold">{getStatusCount('resolved')}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 border-l-4 border-red-500">
+        <div className="bg-white rounded-lg shadow p-4 ">
           <p className="text-sm text-gray-500">Rejected</p>
           <p className="text-2xl font-bold">{getStatusCount('rejected')}</p>
         </div>

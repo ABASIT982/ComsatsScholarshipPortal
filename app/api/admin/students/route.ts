@@ -35,13 +35,14 @@ export async function GET() {
           id: student.id,
           name: student.full_name || student.name || 'Unknown',
           regno: student.reg_number || student.regno || student.email,
+          email: student.email || 'Not provided',
           department: student.department || 'Not assigned',
           level: student.level || student.program_type || 'undergraduate',
           session: student.session || student.academic_session || 'fa23',
           status: student.account_status || student.status || 'active',
           cgpa: student.cgpa,
           registrationDate: student.created_at,
-          avatar: profile?.avatar_url || null  // ✅ Avatar from profiles table
+          avatar: profile?.avatar_url || null  
         }
       })
     )
