@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendSelectionEmailJS } from '@/lib/emailjs';  // ← ADD THIS LINE
-import emailjs from '@emailjs/nodejs';
+import { sendSelectionEmailJS } from '@/lib/emailjs';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -76,63 +75,99 @@ export async function POST(request: NextRequest) {
 
     console.log(`📊 [MERIT API] Found ${applications.length} approved applications`);
 
-    // 3. Calculate scores for each application
     const criteria = scholarship.scoring_criteria;
     const scoredApplications = [];
 
+    // FIRST PASS: Calculate raw scores (convert everything to percentage first)
     for (const app of applications) {
       const applicationData = app.application_data || {};
-      let totalScore = 0;
-      const breakdown: Record<string, number> = {};
+      let totalPercentageScore = 0;
+      const breakdown: Record<string, any> = {};
 
-      // Calculate weighted score for each criterion
       for (const criterion of criteria) {
-        // Get field value from application_data
         let fieldValue = 0;
-        
-        // Handle different field types
         const rawValue = applicationData[criterion.fieldName];
         
         if (rawValue) {
-          // If it's a number, parse it
           if (typeof rawValue === 'number') {
             fieldValue = rawValue;
           } else if (typeof rawValue === 'string') {
-            // Try to parse as number, remove commas if any
             const cleanedValue = rawValue.replace(/,/g, '');
             fieldValue = parseFloat(cleanedValue) || 0;
           }
         }
 
-        // Calculate weighted score
-        const weightedScore = (fieldValue * criterion.weight) / 100;
-        totalScore += weightedScore;
+        // ✅ CONVERT EACH FIELD TO PERCENTAGE BASED ON ITS TYPE
+        let percentageValue = 0;
         
-        // Store breakdown
-        breakdown[criterion.fieldName] = weightedScore;
+        // Check if this field is GPA/CGPA (value between 0-4.33 and field name suggests GPA)
+        const fieldNameLower = criterion.fieldName?.toLowerCase() || '';
+        const fieldLabelLower = criterion.fieldLabel?.toLowerCase() || '';
+        const isGPA = fieldNameLower.includes('gpa') || 
+                      fieldNameLower.includes('cgpa') ||
+                      fieldLabelLower.includes('gpa') ||
+                      fieldLabelLower.includes('cgpa') ||
+                      (fieldValue <= 4.33 && fieldValue > 0);
+        
+        // Check if this is percentage based (value between 0-100)
+        const isPercentage = fieldValue <= 100 && fieldValue > 0 && !isGPA;
+        
+        if (isGPA) {
+          // GPA: 4.0 = 100%, 3.5 = 87.5%, 2.0 = 50%
+          percentageValue = (fieldValue / 4.0) * 100;
+        } else if (isPercentage) {
+          // Already a percentage
+          percentageValue = fieldValue;
+        } else {
+          // Raw marks (FSC, Matric, etc.) - assume max is 1100 or whatever
+          // Store as-is, will be normalized later
+          percentageValue = fieldValue;
+        }
+        
+        // Apply weight to get contribution
+        const weightedScore = (percentageValue * criterion.weight) / 100;
+        totalPercentageScore += weightedScore;
+        
+breakdown[criterion.fieldName] = {
+  raw: fieldValue,
+  type: isGPA ? 'gpa' : (isPercentage ? 'percentage' : 'marks')
+};
       }
 
       scoredApplications.push({
         application_id: app.id,
         student_regno: app.student_regno,
-        total_score: Number(totalScore.toFixed(2)),
-        score_breakdown: breakdown,
+        raw_score: totalPercentageScore,
+        breakdown: breakdown,
         application_data: applicationData
       });
     }
 
-    // 4. Sort by total score (highest first)
-    scoredApplications.sort((a, b) => b.total_score - a.total_score);
+    // ✅ FIND MAX RAW SCORE (for normalization)
+    const maxRawScore = Math.max(...scoredApplications.map(app => app.raw_score));
+    
+    // ✅ SECOND PASS: Normalize final scores to 0-100%
+    const normalizedApplications = scoredApplications.map(app => {
+      let finalScore = 0;
+      
+      if (maxRawScore > 0) {
+        finalScore = (app.raw_score / maxRawScore) * 100;
+      }
+      
+      finalScore = Math.round(finalScore * 100) / 100;
+      
+      return {
+        ...app,
+        total_score: finalScore,
+        raw_score_percentage: app.raw_score
+      };
+    });
 
-    // 5. Assign ranks
-    const rankedApplications = scoredApplications.map((app, index) => ({
-      ...app,
-      rank: index + 1
-    }));
+    // Sort by total score (highest first)
+    normalizedApplications.sort((a, b) => b.total_score - a.total_score);
 
-    // 6. Determine status based on rank and number_of_awards
     const awardCount = scholarship.number_of_awards;
-    const meritEntries = rankedApplications.map((app, index) => {
+    const meritEntries = normalizedApplications.map((app, index) => {
       let status = 'waitlist';
       if (index < awardCount) {
         status = 'selected';
@@ -143,15 +178,16 @@ export async function POST(request: NextRequest) {
         student_regno: app.student_regno,
         application_id: app.application_id,
         total_score: app.total_score,
-        rank: app.rank,
+        rank: index + 1,
         status: status,
-        score_breakdown: app.score_breakdown,
+        score_breakdown: app.breakdown,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       };
     });
 
-    console.log(`📈 [MERIT API] Calculated scores: Top score = ${rankedApplications[0]?.total_score}, Lowest = ${rankedApplications[rankedApplications.length - 1]?.total_score}`);
+    console.log(`📈 [MERIT API] Max raw score: ${maxRawScore}`);
+    console.log(`📈 [MERIT API] Final scores normalized to 0-100: Top = ${normalizedApplications[0]?.total_score}%`);
 
     // 7. Delete any existing merit list for this scholarship
     const { error: deleteError } = await supabase
@@ -161,7 +197,6 @@ export async function POST(request: NextRequest) {
 
     if (deleteError) {
       console.error('❌ [MERIT API] Error deleting old merit list:', deleteError);
-      // Continue anyway, don't fail
     }
 
     // 8. Insert new merit list entries
@@ -188,37 +223,28 @@ export async function POST(request: NextRequest) {
 
     if (updateError) {
       console.error('❌ [MERIT API] Error updating scholarship:', updateError);
-      // Don't fail, merit list is already saved
     }
 
     console.log('✅ [MERIT API] Merit list generated successfully');
 
-    // ✅ ADD NOTIFICATIONS HERE - STUDENTS GET NOTIFIED ABOUT MERIT LIST
+    // Send notifications
     try {
-      console.log('📢 [MERIT API] Sending merit list notifications to students...');
-      
-      // Get scholarship title for the message
       const scholarshipTitle = scholarship.title;
       
-      // Get all students who have entries in the merit list
       const { data: meritStudents, error: meritError } = await supabase
         .from('merit_lists')
-        .select('student_regno, status, rank')
+        .select('student_regno, status, rank, total_score')
         .eq('scholarship_id', scholarshipId);
 
-      if (meritError) {
-        console.error('❌ [MERIT API] Error fetching merit students:', meritError);
-      } else if (meritStudents && meritStudents.length > 0) {
-        console.log(`📢 [MERIT API] Found ${meritStudents.length} students in merit list`);
-        
-        const notifications = meritStudents.map(student => ({
+      if (!meritError && meritStudents && meritStudents.length > 0) {
+        const notifications = meritStudents.map((student: any) => ({
           user_id: student.student_regno,
           user_type: 'student',
           type: 'merit_generated',
           title: student.status === 'selected' ? '🎉 Congratulations! You are Selected' : '📋 Merit List Published',
           message: student.status === 'selected' 
-            ? `You have been selected for "${scholarshipTitle}"! Check your merit list details.`
-            : `Merit list for "${scholarshipTitle}" has been published. Check your status.`,
+            ? `You have been selected for "${scholarshipTitle}"! Score: ${student.total_score}/100`
+            : `Merit list for "${scholarshipTitle}" has been published.`,
           data: {
             scholarshipId: scholarshipId,
             scholarshipTitle: scholarshipTitle,
@@ -229,63 +255,44 @@ export async function POST(request: NextRequest) {
           created_at: new Date().toISOString()
         }));
 
-        const { error: notifError } = await supabase
-          .from('notifications')
-          .insert(notifications);
-
-        if (notifError) {
-          console.error('❌ [MERIT API] Error sending notifications:', notifError);
-        } else {
-          console.log(`✅ [MERIT API] Sent notifications to ${meritStudents.length} students`);
-        }
+        await supabase.from('notifications').insert(notifications);
+        console.log(`✅ Sent notifications to ${meritStudents.length} students`);
       }
     } catch (notifError) {
-      console.error('❌ [MERIT API] Notification error:', notifError);
+      console.error('❌ Notification error:', notifError);
     }
 
-// ✅ ADD EMAILS FOR SELECTED STUDENTS
-// ✅ SEND EMAILS USING EMAILJS
-try {
-  console.log('📧 [MERIT API] Sending emails to selected students...');
-  
-  const selectedStudents = meritEntries.filter(entry => entry.status === 'selected');
-  
-  for (const student of selectedStudents) {
-    // Get student email from profiles table
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('email, full_name')
-      .eq('regno', student.student_regno)
-      .single();
-    
-    const studentEmail = profile?.email;
-    const studentName = profile?.full_name || student.student_regno;
-    
-    if (studentEmail) {
-      console.log(`📧 Sending email to ${studentName} (${studentEmail}) - Rank #${student.rank}`);
+    // Send emails to selected students
+    try {
+      const selectedStudents = meritEntries.filter(entry => entry.status === 'selected');
       
-      const result = await sendSelectionEmailJS({
-        to_email: studentEmail,
-        student_name: studentName,
-        scholarship_title: scholarship.title,
-        rank: student.rank
-      });
-      
-      if (result.success) {
-        console.log(`✅ Email sent to ${studentEmail}`);
-      } else {
-        console.error(`❌ Failed to send email to ${studentEmail}`);
+      for (const student of selectedStudents) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('email, full_name')
+          .eq('regno', student.student_regno)
+          .single();
+        
+        const studentEmail = profile?.email;
+        const studentName = profile?.full_name || student.student_regno;
+        
+        if (studentEmail) {
+          await sendSelectionEmailJS({
+            to_email: studentEmail,
+            student_name: studentName,
+            scholarship_title: scholarship.title,
+            rank: student.rank
+          });
+          console.log(`✅ Email sent to ${studentEmail}`);
+        }
       }
+      
+      console.log(`📧 Completed sending ${selectedStudents.length} emails`);
+    } catch (emailError) {
+      console.error('❌ Email error:', emailError);
     }
-  }
-  
-  console.log(`📧 Completed sending ${selectedStudents.length} emails`);
-  
-} catch (emailError) {
-  console.error('❌ Email error:', emailError);
-}
 
-    // 10. Return summary
+    // Return summary
     return NextResponse.json({
       success: true,
       message: 'Merit list generated successfully',
@@ -293,8 +300,8 @@ try {
         total_applications: applications.length,
         selected_count: Math.min(awardCount, applications.length),
         waitlist_count: Math.max(0, applications.length - awardCount),
-        top_score: rankedApplications[0]?.total_score || 0,
-        cutoff_score: rankedApplications[Math.min(awardCount - 1, rankedApplications.length - 1)]?.total_score || 0
+        top_score: normalizedApplications[0]?.total_score || 0,
+        cutoff_score: normalizedApplications[Math.min(awardCount - 1, normalizedApplications.length - 1)]?.total_score || 0
       },
       merit_list: meritEntries.map(entry => ({
         rank: entry.rank,

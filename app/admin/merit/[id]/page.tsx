@@ -2,11 +2,11 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { 
-  ArrowLeft, 
-  Download, 
-  Award, 
-  ChevronDown, 
+import {
+  ArrowLeft,
+  Download,
+  Award,
+  ChevronDown,
   ChevronUp,
   Mail,
   Eye,
@@ -43,7 +43,7 @@ export default function MeritListDetailPage() {
   const params = useParams();
   const router = useRouter();
   const scholarshipId = params.id as string;
-  
+
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState('');
@@ -88,7 +88,7 @@ export default function MeritListDetailPage() {
             .eq('scholarship_id', scholarshipId)
             .eq('student_regno', entry.student_regno)
             .maybeSingle();
-          
+
           return {
             ...entry,
             application_data: appData?.application_data || {}
@@ -122,7 +122,7 @@ export default function MeritListDetailPage() {
 
       alert('Merit list generated successfully!');
       fetchData(); // Refresh data
-      
+
     } catch (err: any) {
       alert('Error: ' + err.message);
     } finally {
@@ -134,7 +134,7 @@ export default function MeritListDetailPage() {
     try {
       const { error } = await supabase
         .from('merit_lists')
-        .update({ 
+        .update({
           status: newStatus,
           updated_at: new Date().toISOString()
         })
@@ -143,8 +143,8 @@ export default function MeritListDetailPage() {
       if (error) throw error;
 
       // Update local state
-      setMeritList(prev => 
-        prev.map(item => 
+      setMeritList(prev =>
+        prev.map(item =>
           item.id === entryId ? { ...item, status: newStatus as any } : item
         )
       );
@@ -233,14 +233,14 @@ export default function MeritListDetailPage() {
         </body>
       </html>
     `);
-    
+
     printWindow.document.close();
     printWindow.print();
   };
 
   const filteredMeritList = meritList.filter(item => {
     const searchTerm = search.toLowerCase();
-    const matchesSearch = 
+    const matchesSearch =
       item.student_regno.toLowerCase().includes(searchTerm) ||
       (item.application_data?.student_name || '').toLowerCase().includes(searchTerm);
     const matchesStatus = statusFilter === 'all' || item.status === statusFilter;
@@ -289,7 +289,7 @@ export default function MeritListDetailPage() {
             <h1 className="text-3xl font-bold text-gray-900">Merit List</h1>
             <p className="text-gray-600 mt-2">{scholarship?.title}</p>
           </div>
-          
+
           <div className="flex gap-3">
             {meritList.length === 0 ? (
               <button
@@ -422,13 +422,12 @@ export default function MeritListDetailPage() {
                       <tr className="hover:bg-gray-50">
                         <td className="px-6 py-4">
                           <div className="flex items-center">
-                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${
-                              entry.rank <= 3 
-                                ? 'bg-yellow-100 text-yellow-800' 
+                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${entry.rank <= 3
+                                ? 'bg-yellow-100 text-yellow-800'
                                 : entry.status === 'selected' || entry.status === 'awarded'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
                               {entry.rank}
                             </span>
                           </div>
@@ -476,7 +475,7 @@ export default function MeritListDetailPage() {
                           </div>
                         </td>
                       </tr>
-                      
+
                       {/* Expanded Row - Score Breakdown */}
                       {expandedRow === entry.id && (
                         <tr>
@@ -484,11 +483,11 @@ export default function MeritListDetailPage() {
                             <div className="p-4 bg-white rounded-lg shadow-inner">
                               <h4 className="font-semibold mb-3">Score Breakdown</h4>
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {Object.entries(entry.score_breakdown || {}).map(([key, value]) => (
+                                {Object.entries(entry.score_breakdown || {}).map(([key, value]: [string, any]) => (
                                   <div key={key} className="text-center p-3 bg-gray-50 rounded-lg">
                                     <div className="text-sm text-gray-600">{key.replace(/_/g, ' ')}</div>
                                     <div className="text-xl font-bold text-blue-600">
-                                      {typeof value === 'number' ? value.toFixed(1) : value}
+                                      {typeof value === 'object' && value !== null ? value.raw : value}
                                     </div>
                                   </div>
                                 ))}

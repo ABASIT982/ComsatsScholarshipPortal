@@ -9,9 +9,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'student_regno is required' }, { status: 400 })
   }
 
-  // Get all approved applications for this student from the correct table
+  // Get all approved applications
   const { data: approvedApps, error: appsError } = await supabase
-    .from('scholarship_applications')  // ← FIXED: Correct table name
+    .from('scholarship_applications')
     .select('scholarship_id')
     .eq('student_regno', studentRegno)
     .eq('status', 'approved')
@@ -80,7 +80,10 @@ export async function GET(req: NextRequest) {
       percentage = Math.floor((matches / uniqueStudentWords.size) * 100)
     }
     
-    recommendations[scholarship.id] = percentage
+    // 🔥 ONLY add if percentage is GREATER THAN 50%
+    if (percentage > 50) {
+      recommendations[scholarship.id] = percentage
+    }
   }
 
   return NextResponse.json({ recommendations })

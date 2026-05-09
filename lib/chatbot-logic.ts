@@ -20,32 +20,32 @@ export class ScholarshipBot {
     getResponse(userMessage: string): string {
         const msg = userMessage.toLowerCase().trim();
         
-        // Skip very short messages
+        //------------------------this is for to  Skip very short messages--------------------------
         if (msg.length < 3 || msg === 'hy' || msg === 'hi' || msg === 'hello') {
             return this.getHelpResponse();
         }
         
-        // COMPLAINT ABOUT TEACHER
+        //--------------------------this is for  COMPLAINT ABOUT TEACHER------------------------------
         if (this.containsKeyword(msg, ['complaint', 'issue', 'problem']) && this.containsKeyword(msg, ['teacher', 'professor', 'faculty'])) {
             return this.getTeacherComplaintResponse();
         }
         
-        // COMPLAINT (general)
+        //---------------------this is for to  COMPLAINT (general)-------------------------
         if (this.containsKeyword(msg, ['complaint', 'issue', 'problem', 'complain'])) {
             return this.getGeneralComplaintResponse();
         }
         
-        // TEACHER (without complaint word)
+        // --------------------this is for TEACHER------------------------ 
         if (this.containsKeyword(msg, ['teacher', 'professor', 'faculty'])) {
             return "What would you like to know about teachers?\n\n- To file a complaint: type 'complaint about teacher'\n- To check teacher schedule: contact department office\n- Teacher contact info: available on student portal\n\nDo you want to file a complaint?";
         }
         
-        // SPORTS
+        // -----------------------this is for SPORTS---------------------
         if (this.containsKeyword(msg, ['sports', 'gym', 'cricket', 'football'])) {
             return this.getSportsResponse();
         }
         
-        // FEE
+        // -----------------this for FEE--------------------
         if (this.containsKeyword(msg, ['fee', 'fees', 'tuition', 'payment', 'cost'])) {
             if (this.containsKeyword(msg, ['structure', 'per semester', 'program'])) {
                 return this.getFeeStructureResponse();
@@ -62,7 +62,7 @@ export class ScholarshipBot {
             return this.getFeeGeneralResponse();
         }
         
-        // ADMISSION
+        //------------------this for ADMISSION-----------------------
         if (this.containsKeyword(msg, ['admission', 'apply', 'enroll', 'join university'])) {
             if (this.containsKeyword(msg, ['requirement', 'eligibility', 'gpa', 'marks'])) {
                 return this.getAdmissionRequirementsResponse();
@@ -79,7 +79,7 @@ export class ScholarshipBot {
             return this.getAdmissionGeneralResponse();
         }
         
-        // SCHOLARSHIP
+        //------------------------this is for  SCHOLARSHIP----------------------------
         if (this.containsKeyword(msg, ['scholarship', 'scholar', 'financial aid', 'fund'])) {
             if (this.containsKeyword(msg, ['deadline', 'due', 'last date'])) {
                 return this.getScholarshipDeadlineResponse();
@@ -99,7 +99,7 @@ export class ScholarshipBot {
             return this.getScholarshipGeneralResponse();
         }
         
-        // EXAM
+        //-------------------------------this is for EXAM--------------------------------
         if (this.containsKeyword(msg, ['exam', 'test', 'midterm', 'final', 'quiz'])) {
             if (this.containsKeyword(msg, ['schedule', 'date', 'when'])) {
                 return this.getExamScheduleResponse();
@@ -113,17 +113,17 @@ export class ScholarshipBot {
             return this.getExamGeneralResponse();
         }
         
-        // ATTENDANCE
+        //--------------------this for  ATTENDANCE-------------------------
         if (this.containsKeyword(msg, ['attendance', 'absent', 'leave'])) {
             return this.getAttendanceResponse();
         }
         
-        // DRESS CODE
+        //---------------------this for DRESS CODE--------------------------
         if (this.containsKeyword(msg, ['dress code', 'uniform', 'clothing'])) {
             return this.getDressCodeResponse();
         }
         
-        // CONTACT
+        //----------------------this for CONTACT----------------------------------
         if (this.containsKeyword(msg, ['contact', 'phone', 'number', 'email', 'helpline'])) {
             return this.getContactResponse();
         }
