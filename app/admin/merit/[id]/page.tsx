@@ -30,6 +30,8 @@ interface MeritEntry {
   status: 'selected' | 'waitlist' | 'awarded' | 'pending';
   score_breakdown: Record<string, number>;
   application_data?: any;
+  award_tier?: string;
+  award_description?: string;
 }
 
 interface Scholarship {
@@ -37,6 +39,7 @@ interface Scholarship {
   title: string;
   number_of_awards: number;
   scoring_criteria: any[];
+  scholarship_mode?: string;
 }
 
 export default function MeritListDetailPage() {
@@ -53,6 +56,8 @@ export default function MeritListDetailPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
+  const isTiered = scholarship?.scholarship_mode === 'tiered';
+
   useEffect(() => {
     fetchData();
   }, [scholarshipId]);
@@ -60,26 +65,23 @@ export default function MeritListDetailPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch scholarship details
       const { data: scholarshipData, error: scholarshipError } = await supabase
         .from('scholarships')
-        .select('id, title, number_of_awards, scoring_criteria')
+        .select('id, title, number_of_awards, scoring_criteria, scholarship_mode')
         .eq('id', scholarshipId)
         .single();
 
       if (scholarshipError) throw scholarshipError;
       setScholarship(scholarshipData);
 
-      // Fetch merit list
       const { data: meritData, error: meritError } = await supabase
         .from('merit_lists')
-        .select('*')
+        .select('*, award_tier, award_description')
         .eq('scholarship_id', scholarshipId)
         .order('rank', { ascending: true });
 
       if (meritError) throw meritError;
 
-      // Get student names from applications
       const meritWithNames = await Promise.all(
         (meritData || []).map(async (entry) => {
           const { data: appData } = await supabase
@@ -121,7 +123,7 @@ export default function MeritListDetailPage() {
       }
 
       alert('Merit list generated successfully!');
-      fetchData(); // Refresh data
+      fetchData();
 
     } catch (err: any) {
       alert('Error: ' + err.message);
@@ -142,7 +144,6 @@ export default function MeritListDetailPage() {
 
       if (error) throw error;
 
-      // Update local state
       setMeritList(prev =>
         prev.map(item =>
           item.id === entryId ? { ...item, status: newStatus as any } : item
@@ -155,19 +156,34 @@ export default function MeritListDetailPage() {
   };
 
   const exportAsCSV = () => {
-    const headers = ['Rank', 'Student Name', 'Reg No', 'Total Score', 'Status'];
-    const rows = filteredMeritList.map(item => [
-      item.rank,
-      item.application_data?.student_name || 'Unknown',
-      item.student_regno,
-      item.total_score,
-      item.status
-    ]);
+    let headers = ['Rank', 'Student Name', 'Reg No', 'Total Score', 'Status'];
+    if (isTiered) {
+      headers = ['Rank', 'Student Name', 'Reg No', 'Total Score', 'Awarded Tier', 'Benefit', 'Status'];
+    }
 
-    const csvContent = [headers, ...rows]
-      .map(row => row.join(','))
-      .join('\n');
+    const rows = filteredMeritList.map(item => {
+      const baseRow = [
+        item.rank,
+        item.application_data?.student_name || 'Unknown',
+        item.student_regno,
+        item.total_score,
+        item.status
+      ];
+      if (isTiered) {
+        return [
+          item.rank,
+          item.application_data?.student_name || 'Unknown',
+          item.student_regno,
+          item.total_score,
+          item.award_tier || '-',
+          item.award_description || '-',
+          item.status
+        ];
+      }
+      return baseRow;
+    });
 
+    const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -197,15 +213,30 @@ export default function MeritListDetailPage() {
       </style>
     `;
 
-    const tableRows = filteredMeritList.map(item => `
-      <tr>
-        <td class="rank">${item.rank}</td>
-        <td>${item.application_data?.student_name || 'Unknown'}</td>
-        <td>${item.student_regno}</td>
-        <td>${item.total_score.toFixed(1)}</td>
-        <td class="${item.status}">${item.status}</td>
-      </tr>
-    `).join('');
+    let tableRows = '';
+    if (isTiered) {
+      tableRows = filteredMeritList.map(item => `
+        <tr>
+          <td class="rank">${item.rank}</td>
+          <td>${item.application_data?.student_name || 'Unknown'}</td>
+          <td>${item.student_regno}</td>
+          <td>${item.total_score.toFixed(1)}%</td>
+          <td>${item.award_tier || '-'}</td>
+          <td>${item.award_description || '-'}</td>
+          <td class="${item.status}">${item.status}</td>
+        </tr>
+      `).join('');
+    } else {
+      tableRows = filteredMeritList.map(item => `
+        <tr>
+          <td class="rank">${item.rank}</td>
+          <td>${item.application_data?.student_name || 'Unknown'}</td>
+          <td>${item.student_regno}</td>
+          <td>${item.total_score.toFixed(1)}%</td>
+          <td class="${item.status}">${item.status}</td>
+        </tr>
+      `).join('');
+    }
 
     printWindow.document.write(`
       <html>
@@ -223,6 +254,7 @@ export default function MeritListDetailPage() {
                 <th>Student Name</th>
                 <th>Reg No</th>
                 <th>Score</th>
+                ${isTiered ? '<th>Awarded Tier</th><th>Benefit</th>' : ''}
                 <th>Status</th>
               </tr>
             </thead>
@@ -267,12 +299,10 @@ export default function MeritListDetailPage() {
   }
 
   const selectedCount = meritList.filter(m => m.status === 'selected' || m.status === 'awarded').length;
-  const awardTarget = scholarship?.number_of_awards || 0;
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
-        {/* Back button at the very top with proper spacing */}
         <div className="mb-4">
           <button
             onClick={() => router.back()}
@@ -283,11 +313,15 @@ export default function MeritListDetailPage() {
           </button>
         </div>
 
-        {/* Header moved down */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Merit List</h1>
             <p className="text-gray-600 mt-2">{scholarship?.title}</p>
+            {isTiered && (
+              <span className="inline-block mt-1 text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                Tiered Scholarship
+              </span>
+            )}
           </div>
 
           <div className="flex gap-3">
@@ -321,14 +355,12 @@ export default function MeritListDetailPage() {
           </div>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
             {error}
           </div>
         )}
 
-        {/* Stats Cards */}
         {meritList.length > 0 && (
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
@@ -336,7 +368,7 @@ export default function MeritListDetailPage() {
               <div className="text-2xl font-bold text-gray-900">{meritList.length}</div>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <div className="text-sm text-gray-600">Selected ({awardTarget})</div>
+              <div className="text-sm text-gray-600">Selected</div>
               <div className="text-2xl font-bold text-green-600">{selectedCount}</div>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
@@ -346,11 +378,9 @@ export default function MeritListDetailPage() {
               </div>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-              <div className="text-sm text-gray-600">Cutoff Score</div>
+              <div className="text-sm text-gray-600">Top Score</div>
               <div className="text-2xl font-bold text-blue-600">
-                {awardTarget > 0 && meritList.length >= awardTarget
-                  ? meritList[awardTarget - 1]?.total_score.toFixed(1)
-                  : 'N/A'}
+                {meritList[0]?.total_score.toFixed(1) || 'N/A'}%
               </div>
             </div>
           </div>
@@ -374,7 +404,6 @@ export default function MeritListDetailPage() {
           </div>
         ) : (
           <>
-            {/* Filters */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
               <div className="flex gap-4">
                 <div className="flex-1 relative">
@@ -404,52 +433,66 @@ export default function MeritListDetailPage() {
             </div>
 
             {/* Merit List Table */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <table className="w-full">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-x-auto">
+              <table className="w-full min-w-[1000px]">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reg No</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Score</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    <th className="w-16 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                    <th className="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Name</th>
+                    <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reg No</th>
+                    <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+                    {isTiered && (
+                      <>
+                        <th className="w-32 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Awarded Tier</th>
+                        <th className="w-48 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Benefit</th>
+                      </>
+                    )}
+                    <th className="w-24 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="w-20 px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {filteredMeritList.map((entry) => (
                     <React.Fragment key={entry.id}>
                       <tr className="hover:bg-gray-50">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center">
-                            <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${entry.rank <= 3
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : entry.status === 'selected' || entry.status === 'awarded'
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-gray-100 text-gray-800'
-                              }`}>
-                              {entry.rank}
-                            </span>
-                          </div>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium ${entry.rank <= 3
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : entry.status === 'selected' || entry.status === 'awarded'
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                            {entry.rank}
+                          </span>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="font-medium text-gray-900">
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900 truncate max-w-[200px]" title={entry.application_data?.student_name || 'Unknown Student'}>
                             {entry.application_data?.student_name || 'Unknown Student'}
                           </div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="text-sm text-gray-600">
-                            {entry.student_regno}
-                          </div>
+                        <td className="px-4 py-3">
+                          <div className="text-sm text-gray-600">{entry.student_regno}</div>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="font-bold text-lg text-gray-900">{entry.total_score.toFixed(1)}</div>
+                        <td className="px-4 py-3">
+                          <div className="font-bold text-gray-900">{entry.total_score.toFixed(1)}%</div>
                         </td>
-                        <td className="px-6 py-4">
+                        {isTiered && (
+                          <>
+                            <td className="px-4 py-3">
+                              <div className="font-semibold text-blue-600">{entry.award_tier || '-'}</div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="text-sm text-gray-600 truncate max-w-[200px]" title={entry.award_description || '-'}>
+                                {entry.award_description || '-'}
+                              </div>
+                            </td>
+                          </>
+                        )}
+                        <td className="px-4 py-3">
                           <select
                             value={entry.status}
                             onChange={(e) => updateStatus(entry.id, e.target.value)}
-                            className={`px-3 py-1 text-xs rounded-full font-medium ${getStatusColor(entry.status)} border-none focus:ring-2 focus:ring-blue-500`}
+                            className={`px-2 py-1 text-xs rounded-full font-medium ${getStatusColor(entry.status)} border-none focus:ring-2 focus:ring-blue-500`}
                           >
                             <option value="selected">Selected</option>
                             <option value="waitlist">Waitlist</option>
@@ -457,20 +500,23 @@ export default function MeritListDetailPage() {
                             <option value="pending">Pending</option>
                           </select>
                         </td>
-                        <td className="px-6 py-4">
-                          <div className="flex gap-2">
+                        <td className="px-4 py-3">
+                          <div className="flex gap-1">
                             <button
                               onClick={() => setExpandedRow(expandedRow === entry.id ? null : entry.id)}
-                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg"
                               title="View Score Breakdown"
                             >
-                              {expandedRow === entry.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                              {expandedRow === entry.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                             </button>
                             <button
-                              className="p-2 text-green-600 hover:bg-green-50 rounded-lg"
+                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg"
                               title="View Application"
+                              onClick={() => {
+                                alert(`Student: ${entry.application_data?.student_name || 'Unknown'}\nReg No: ${entry.student_regno}\nScore: ${entry.total_score}%\nTier: ${entry.award_tier || 'N/A'}\nBenefit: ${entry.award_description || 'N/A'}`);
+                              }}
                             >
-                              <Eye size={20} />
+                              <Eye size={18} />
                             </button>
                           </div>
                         </td>
@@ -479,14 +525,14 @@ export default function MeritListDetailPage() {
                       {/* Expanded Row - Score Breakdown */}
                       {expandedRow === entry.id && (
                         <tr>
-                          <td colSpan={6} className="px-6 py-4 bg-blue-50">
-                            <div className="p-4 bg-white rounded-lg shadow-inner">
-                              <h4 className="font-semibold mb-3">Score Breakdown</h4>
-                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <td colSpan={isTiered ? 8 : 6} className="px-4 py-3 bg-blue-50">
+                            <div className="p-3 bg-white rounded-lg shadow-inner">
+                              <h4 className="font-semibold mb-2 text-sm">Score Breakdown</h4>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 {Object.entries(entry.score_breakdown || {}).map(([key, value]: [string, any]) => (
-                                  <div key={key} className="text-center p-3 bg-gray-50 rounded-lg">
-                                    <div className="text-sm text-gray-600">{key.replace(/_/g, ' ')}</div>
-                                    <div className="text-xl font-bold text-blue-600">
+                                  <div key={key} className="text-center p-2 bg-gray-50 rounded-lg">
+                                    <div className="text-xs text-gray-600">{key.replace(/_/g, ' ')}</div>
+                                    <div className="text-lg font-bold text-blue-600">
                                       {typeof value === 'object' && value !== null ? value.raw : value}
                                     </div>
                                   </div>

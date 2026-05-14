@@ -23,6 +23,7 @@ export async function GET(
       );
     }
 
+    // Fetch scholarship with form fields
     const { data: scholarship, error } = await supabase
       .from('scholarships')
       .select(`
@@ -47,9 +48,25 @@ export async function GET(
       );
     }
     
+    // ✅ FIX: Fetch tiers for ALL scholarships (not just tiered)
+    // Always try to fetch tiers
+    const { data: tierData } = await supabase
+      .from('scholarship_tiers')
+      .select('*')
+      .eq('scholarship_id', id)
+      .order('min_score', { ascending: false });
+    
+    const tiers = tierData || [];
+    
+    console.log('📊 [API] Fetched tiers:', tiers.length);
+    console.log('📊 [API] Scholarship mode:', scholarship.scholarship_mode);
+    
     return NextResponse.json({ 
       success: true,
-      scholarship 
+      scholarship: { 
+        ...scholarship, 
+        tiers: tiers  // Always include tiers array
+      }
     });
 
   } catch (error: unknown) {
@@ -76,7 +93,7 @@ export async function DELETE(
       );
     }
 
-    // ✅ STEP 1: Delete all form fields for this scholarship FIRST
+    // Delete form fields
     const { error: fieldsError } = await supabase
       .from('scholarship_form_fields')
       .delete()
@@ -84,10 +101,19 @@ export async function DELETE(
 
     if (fieldsError) {
       console.error('❌ [API] Error deleting form fields:', fieldsError);
-      // Continue anyway, try to delete scholarship
     }
 
-    // ✅ STEP 2: Then delete the scholarship
+    // NEW: Delete tiers
+    const { error: tiersError } = await supabase
+      .from('scholarship_tiers')
+      .delete()
+      .eq('scholarship_id', id);
+
+    if (tiersError) {
+      console.error('❌ [API] Error deleting tiers:', tiersError);
+    }
+
+    // Delete the scholarship
     const { error } = await supabase
       .from('scholarships')
       .delete()
@@ -103,7 +129,7 @@ export async function DELETE(
 
     return NextResponse.json({
       success: true,
-      message: 'Scholarship and related form fields deleted successfully'
+      message: 'Scholarship and related data deleted successfully'
     });
 
   } catch (error: unknown) {
@@ -115,7 +141,6 @@ export async function DELETE(
   }
 }
 
-// ✅ FIXED PUT METHOD WITH SCORING CRITERIA
 export async function PUT(
   request: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -132,11 +157,15 @@ export async function PUT(
       form_template,
       custom_fields = [],
       scoring_criteria,
-      number_of_awards
+      number_of_awards,
+      scholarship_mode,
+      tiers
     } = await request.json();
 
     console.log('✏️ [API] Updating scholarship:', id);
     console.log('📊 [API] Scoring criteria received:', scoring_criteria);
+    console.log('📊 [API] Scholarship mode:', scholarship_mode);
+    console.log('📊 [API] Tiers:', tiers?.length);
 
     if (!id || id === 'undefined') {
       return NextResponse.json(
@@ -152,7 +181,6 @@ export async function PUT(
       );
     }
 
-    // ✅ PREPARE UPDATE DATA WITH ALL FIELDS
     const updateData: any = {
       title,
       description,
@@ -163,6 +191,7 @@ export async function PUT(
       custom_fields: form_template === 'custom' ? custom_fields : [],
       scoring_criteria: scoring_criteria || [],
       number_of_awards: number_of_awards || 0,
+      scholarship_mode: scholarship_mode || 'single',
       updated_at: new Date().toISOString()
     };
 
@@ -217,6 +246,40 @@ export async function PUT(
     } else if (form_template !== 'custom') {
       await supabase
         .from('scholarship_form_fields')
+        .delete()
+        .eq('scholarship_id', id);
+    }
+
+    // NEW: Handle tiers for tiered mode
+    if (scholarship_mode === 'tiered' && tiers && tiers.length > 0) {
+      // Delete existing tiers
+      await supabase
+        .from('scholarship_tiers')
+        .delete()
+        .eq('scholarship_id', id);
+
+      // Insert new tiers
+      const tierData = tiers.map((tier: any, index: number) => ({
+        scholarship_id: id,
+        tier_name: tier.tier_name,
+        min_score: tier.min_score,
+        max_score: tier.max_score,
+        award_description: tier.award_description,
+        award_amount: tier.award_amount,
+        tier_order: index
+      }));
+
+      const { error: tierError } = await supabase
+        .from('scholarship_tiers')
+        .insert(tierData);
+
+      if (tierError) {
+        console.error('❌ [API] Error saving tiers:', tierError);
+      }
+    } else if (scholarship_mode === 'single') {
+      // Delete tiers if switching to single mode
+      await supabase
+        .from('scholarship_tiers')
         .delete()
         .eq('scholarship_id', id);
     }

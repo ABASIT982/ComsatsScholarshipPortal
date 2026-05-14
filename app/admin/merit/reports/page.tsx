@@ -25,6 +25,8 @@ interface MeritEntry {
   student_regno: string;
   total_score: number;
   status: string;
+  award_tier?: string;
+  award_description?: string;
   student_name?: string;
 }
 
@@ -32,6 +34,7 @@ interface Scholarship {
   id: string;
   title: string;
   number_of_awards: number;
+  scholarship_mode?: string;
 }
 
 export default function MeritReportsPage() {
@@ -40,6 +43,7 @@ export default function MeritReportsPage() {
   const [selectedScholarship, setSelectedScholarship] = useState<string>('all');
   const [meritList, setMeritList] = useState<MeritEntry[]>([]);
   const [stats, setStats] = useState<any>(null);
+  const [selectedScholarshipMode, setSelectedScholarshipMode] = useState<string | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -48,14 +52,17 @@ export default function MeritReportsPage() {
   useEffect(() => {
     if (selectedScholarship) {
       fetchMeritList(selectedScholarship);
+      // Get scholarship mode
+      const scholarship = scholarships.find(s => s.id === selectedScholarship);
+      setSelectedScholarshipMode(scholarship?.scholarship_mode || null);
     }
-  }, [selectedScholarship]);
+  }, [selectedScholarship, scholarships]);
 
   const fetchData = async () => {
     try {
       const { data: scholarshipsData } = await supabase
         .from('scholarships')
-        .select('id, title, number_of_awards')
+        .select('id, title, number_of_awards, scholarship_mode')
         .order('created_at', { ascending: false });
 
       setScholarships(scholarshipsData || []);
@@ -70,7 +77,7 @@ export default function MeritReportsPage() {
     try {
       let query = supabase
         .from('merit_lists')
-        .select('*')
+        .select('*, award_tier, award_description')
         .order('rank', { ascending: true });
 
       if (scholarshipId !== 'all') {
@@ -120,75 +127,119 @@ export default function MeritReportsPage() {
     }
   };
 
-const downloadPDF = () => {
-  try {
-    const doc = new jsPDF();
-    
-    // Title
-    doc.setFontSize(20);
-    doc.text('Merit List Report', 14, 22);
-    
-    // Date
-    doc.setFontSize(10);
-    doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
-    
-    // Scholarship info
-    doc.setFontSize(12);
-    const scholarshipTitle = selectedScholarship === 'all' 
-      ? 'All Scholarships' 
-      : scholarships.find(s => s.id === selectedScholarship)?.title || '';
-    doc.text(`Scholarship: ${scholarshipTitle}`, 14, 38);
+  const isTiered = () => {
+    if (selectedScholarship === 'all') return false;
+    return selectedScholarshipMode === 'tiered';
+  };
 
-    // Stats table
-    if (stats) {
-      autoTable(doc, {
-        startY: 45,
-        head: [['Metric', 'Value']],
-        body: [
-          ['Total Applications', stats.total_applications.toString()],
-          ['Total Selected', stats.total_selected.toString()],
-          ['Waitlist', stats.total_waitlist.toString()],
-          ['Pending', stats.total_pending.toString()],
-          ['Average Score', stats.average_score.toString()],
-          ['Selection Rate', `${stats.selection_rate}%`],
-        ],
+  const downloadPDF = () => {
+    try {
+      const doc = new jsPDF();
+      
+      // Title
+      doc.setFontSize(20);
+      doc.text('Merit List Report', 14, 22);
+      
+      // Date
+      doc.setFontSize(10);
+      doc.text(`Generated: ${new Date().toLocaleDateString()}`, 14, 30);
+      
+      // Scholarship info
+      doc.setFontSize(12);
+      const scholarshipTitle = selectedScholarship === 'all' 
+        ? 'All Scholarships' 
+        : scholarships.find(s => s.id === selectedScholarship)?.title || '';
+      doc.text(`Scholarship: ${scholarshipTitle}`, 14, 38);
+
+      // Stats table
+      if (stats) {
+        autoTable(doc, {
+          startY: 45,
+          head: [['Metric', 'Value']],
+          body: [
+            ['Total Applications', stats.total_applications.toString()],
+            ['Total Selected', stats.total_selected.toString()],
+            ['Waitlist', stats.total_waitlist.toString()],
+            ['Pending', stats.total_pending.toString()],
+            ['Average Score', stats.average_score.toString()],
+            ['Selection Rate', `${stats.selection_rate}%`],
+          ],
+        });
+      }
+
+      // Merit list table - conditional headers for tiered mode
+      const isTieredScholarship = isTiered();
+      
+      let headers: string[] = ['Rank', 'Student Name', 'Reg No', 'Score', 'Status'];
+      if (isTieredScholarship) {
+        headers = ['Rank', 'Student Name', 'Reg No', 'Score', 'Awarded Tier', 'Benefit', 'Status'];
+      }
+
+      let bodyRows = meritList.map(m => {
+        if (isTieredScholarship) {
+          return [
+            m.rank.toString(),
+            m.student_name || m.student_regno,
+            m.student_regno,
+            m.total_score.toFixed(1),
+            m.award_tier || '-',
+            m.award_description || '-',
+            m.status
+          ];
+        }
+        return [
+          m.rank.toString(),
+          m.student_name || m.student_regno,
+          m.student_regno,
+          m.total_score.toFixed(1),
+          m.status
+        ];
       });
+
+      autoTable(doc, {
+        startY: (doc as any).lastAutoTable?.finalY + 10 || 80,
+        head: [headers],
+        body: bodyRows,
+        styles: { fontSize: 8 },
+        headStyles: { fillColor: [41, 128, 185] }
+      });
+
+      doc.save(`merit-report-${Date.now()}.pdf`);
+    } catch (error) {
+      console.error('PDF Error:', error);
+      alert('Error generating PDF. Please try again.');
     }
-
-    // Merit list table
-    autoTable(doc, {
-      startY: (doc as any).lastAutoTable.finalY + 10,
-      head: [['Rank', 'Student Name', 'Reg No', 'Score', 'Status']],
-      body: meritList.map(m => [
-        m.rank.toString(),
-        m.student_name || m.student_regno,
-        m.student_regno,
-        m.total_score.toFixed(1),
-        m.status
-      ]),
-      styles: { fontSize: 8 },
-      headStyles: { fillColor: [41, 128, 185] }
-    });
-
-    doc.save(`merit-report-${Date.now()}.pdf`);
-  } catch (error) {
-    console.error('PDF Error:', error);
-    alert('Error generating PDF. Please try again.');
-  }
-};
-
+  };
 
   const downloadCSV = () => {
     try {
-      // FIXED: Headers with both Name and Reg No
-      const headers = ['Rank', 'Student Name', 'Reg No', 'Score', 'Status'];
-      const rows = meritList.map(m => [
-        m.rank,
-        m.student_name || m.student_regno, // This shows name
-        m.student_regno,                   // This shows reg no
-        m.total_score,
-        m.status
-      ]);
+      const isTieredScholarship = isTiered();
+      
+      let headers: string[] = ['Rank', 'Student Name', 'Reg No', 'Score', 'Status'];
+      if (isTieredScholarship) {
+        headers = ['Rank', 'Student Name', 'Reg No', 'Score', 'Awarded Tier', 'Benefit', 'Status'];
+      }
+
+      let rows = meritList.map(m => {
+        if (isTieredScholarship) {
+          return [
+            m.rank,
+            m.student_name || m.student_regno,
+            m.student_regno,
+            m.total_score,
+            m.award_tier || '-',
+            m.award_description || '-',
+            m.status
+          ];
+        }
+        return [
+          m.rank,
+          m.student_name || m.student_regno,
+          m.student_regno,
+          m.total_score,
+          m.status
+        ];
+      });
 
       const csvContent = [headers, ...rows]
         .map(row => row.join(','))
@@ -215,6 +266,8 @@ const downloadPDF = () => {
       </div>
     );
   }
+
+  const isTieredScholarship = isTiered();
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -255,7 +308,9 @@ const downloadPDF = () => {
               >
                 <option value="all">All Scholarships</option>
                 {scholarships.map(s => (
-                  <option key={s.id} value={s.id}>{s.title}</option>
+                  <option key={s.id} value={s.id}>
+                    {s.title} {s.scholarship_mode === 'tiered' ? '(Tiered)' : '(Single)'}
+                  </option>
                 ))}
               </select>
             </div>
@@ -308,6 +363,11 @@ const downloadPDF = () => {
             <div className="bg-white rounded-xl shadow-sm overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                 <h3 className="font-semibold text-gray-900">Merit List</h3>
+                {/* {isTieredScholarship && (
+                  <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                    Tiered Scholarship
+                  </span>
+                )} */}
                 <span className="text-sm text-gray-600">Total: {meritList.length} students</span>
               </div>
               <div className="overflow-x-auto">
@@ -318,6 +378,12 @@ const downloadPDF = () => {
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Student Name</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Reg No</th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Score</th>
+                      {isTieredScholarship && (
+                        <>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Awarded Tier</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Benefit</th>
+                        </>
+                      )}
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Status</th>
                     </tr>
                   </thead>
@@ -327,7 +393,15 @@ const downloadPDF = () => {
                         <td className="px-6 py-4 font-medium">{entry.rank}</td>
                         <td className="px-6 py-4">{entry.student_name || entry.student_regno}</td>
                         <td className="px-6 py-4">{entry.student_regno}</td>
-                        <td className="px-6 py-4">{entry.total_score.toFixed(1)}</td>
+                        <td className="px-6 py-4 font-semibold">{entry.total_score.toFixed(1)}%</td>
+                        {isTieredScholarship && (
+                          <>
+                            <td className="px-6 py-4">
+                              <span className="font-semibold text-blue-600">{entry.award_tier || '-'}</span>
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600">{entry.award_description || '-'}</td>
+                          </>
+                        )}
                         <td className="px-6 py-4">
                           <span className={`px-2 py-1 text-xs rounded-full ${
                             entry.status === 'selected' || entry.status === 'awarded' ? 'bg-green-100 text-green-800' :
