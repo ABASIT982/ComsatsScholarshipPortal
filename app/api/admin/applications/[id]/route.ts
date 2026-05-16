@@ -139,7 +139,7 @@ export async function PATCH(
           userId: application.student_regno,
           userType: 'student',
           type: 'application_approved',
-          title: '✅ Application Approved',
+          title: 'Application Approved',
           message: `Congratulations! Your application for "${scholarshipTitle}" has been approved.`,
           data: { 
             applicationId: application.id,

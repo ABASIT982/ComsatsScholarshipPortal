@@ -132,28 +132,75 @@ export default function MeritListDetailPage() {
     }
   };
 
-  const updateStatus = async (entryId: string, newStatus: string) => {
-    try {
-      const { error } = await supabase
-        .from('merit_lists')
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', entryId);
+const updateStatus = async (entryId: string, newStatus: string) => {
+  try {
+    // Get the student entry before updating
+    const currentEntry = meritList.find(m => m.id === entryId);
+    
+    const { error } = await supabase
+      .from('merit_lists')
+      .update({
+        status: newStatus,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', entryId);
 
-      if (error) throw error;
+    if (error) throw error;
 
-      setMeritList(prev =>
-        prev.map(item =>
-          item.id === entryId ? { ...item, status: newStatus as any } : item
-        )
-      );
+    setMeritList(prev =>
+      prev.map(item =>
+        item.id === entryId ? { ...item, status: newStatus as any } : item
+      )
+    );
 
-    } catch (err: any) {
-      alert('Error updating status: ' + err.message);
+    // ✅ Send notification to student about status change
+    if (currentEntry && currentEntry.student_regno) {
+      let notificationTitle = '';
+      let notificationMessage = '';
+      
+      if (newStatus === 'selected') {
+        notificationTitle = 'Congratulations! Status Updated';
+        notificationMessage = `You have been SELECTED for "${scholarship?.title}". ${currentEntry.award_tier ? `Awarded: ${currentEntry.award_tier} - ${currentEntry.award_description}` : ''}`;
+      } else if (newStatus === 'waitlist') {
+        notificationTitle = 'Status Updated';
+        notificationMessage = `You have been moved to WAITLIST for "${scholarship?.title}".`;
+      } else if (newStatus === 'awarded') {
+        notificationTitle = 'Scholarship Awarded';
+        notificationMessage = `Congratulations! "${scholarship?.title}" has been AWARDED to you.`;
+      } else if (newStatus === 'pending') {
+        notificationTitle = 'Status Updated';
+        notificationMessage = `Your application for "${scholarship?.title}" is now PENDING review.`;
+      }
+
+      const { error: notifError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: currentEntry.student_regno,
+          user_type: 'student',
+          type: 'status_updated',
+          title: notificationTitle,
+          message: notificationMessage,
+          data: {
+            scholarshipId: scholarshipId,
+            scholarshipTitle: scholarship?.title,
+            status: newStatus,
+            rank: currentEntry.rank,
+            award_tier: currentEntry.award_tier,
+            award_description: currentEntry.award_description
+          },
+          is_read: false,
+          created_at: new Date().toISOString()
+        });
+
+      if (notifError) {
+        console.error('Failed to send notification:', notifError);
+      }
     }
-  };
+
+  } catch (err: any) {
+    alert('Error updating status: ' + err.message);
+  }
+};
 
   const exportAsCSV = () => {
     let headers = ['Rank', 'Student Name', 'Reg No', 'Total Score', 'Status'];
@@ -324,35 +371,48 @@ export default function MeritListDetailPage() {
             )}
           </div>
 
-          <div className="flex gap-3">
-            {meritList.length === 0 ? (
-              <button
-                onClick={generateMeritList}
-                disabled={generating}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-              >
-                <RefreshCw size={20} className={generating ? 'animate-spin' : ''} />
-                {generating ? 'Generating...' : 'Generate Merit List'}
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={printMeritList}
-                  className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
-                >
-                  <Printer size={20} />
-                  Print
-                </button>
-                <button
-                  onClick={exportAsCSV}
-                  className="bg-gray-800 text-white px-6 py-3 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2"
-                >
-                  <Download size={20} />
-                  Export CSV
-                </button>
-              </>
-            )}
-          </div>
+<div className="flex gap-3">
+  {/* Regenerate button - always show when merit list exists */}
+  {meritList.length > 0 && (
+    <button
+      onClick={generateMeritList}
+      disabled={generating}
+      className="bg-yellow-600 text-white px-6 py-3 rounded-lg hover:bg-yellow-700 transition-colors flex items-center gap-2"
+      title="Regenerate merit list after changing criteria"
+    >
+      <RefreshCw size={20} className={generating ? 'animate-spin' : ''} />
+      {generating ? 'Regenerating...' : 'Regenerate Merit List'}
+    </button>
+  )}
+  
+  {meritList.length === 0 ? (
+    <button
+      onClick={generateMeritList}
+      disabled={generating}
+      className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+    >
+      <RefreshCw size={20} className={generating ? 'animate-spin' : ''} />
+      {generating ? 'Generating...' : 'Generate Merit List'}
+    </button>
+  ) : (
+    <>
+      <button
+        onClick={printMeritList}
+        className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
+      >
+        <Printer size={20} />
+        Print
+      </button>
+      <button
+        onClick={exportAsCSV}
+        className="bg-gray-800 text-white px-6 py-3 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2"
+      >
+        <Download size={20} />
+        Export CSV
+      </button>
+    </>
+  )}
+</div>
         </div>
 
         {error && (

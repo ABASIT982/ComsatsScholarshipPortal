@@ -262,7 +262,7 @@ export async function POST(request: NextRequest) {
           user_id: student.student_regno,
           user_type: 'student',
           type: 'merit_generated',
-          title: student.status === 'selected' ? '🎉 Congratulations! You are Selected' : '📋 Merit List Published',
+          title: student.status === 'selected' ? 'Congratulations! You are Selected' : '📋 Merit List Published',
           message: student.status === 'selected' 
             ? `You have been selected for "${scholarshipTitle}"! ${student.award_tier ? `Awarded: ${student.award_tier} - ${student.award_description}` : `Score: ${student.total_score}/100`}`
             : `Merit list for "${scholarshipTitle}" has been published.`,

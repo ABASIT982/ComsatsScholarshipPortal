@@ -178,7 +178,7 @@ if (scholarship_mode === 'tiered' && tiers && tiers.length > 0) {
             user_id: student.regno,
             user_type: 'student',
             type: 'new_scholarship',
-            title: '🎓 New Scholarship Available',
+            title: 'New Scholarship Available',
             message: `"${data.title}" is now open for applications. Apply before ${new Date(deadline).toLocaleDateString()}!`,
             data: {
               scholarshipId: data.id,
