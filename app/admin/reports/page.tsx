@@ -102,20 +102,240 @@ export default function AdminReportsPage() {
     const printContent = document.querySelector('.print-area');
     if (!printContent) return;
     
-    const originalContents = document.body.innerHTML;
-    const printHtml = printContent.innerHTML;
+    const logoUrl = `${window.location.protocol}//${window.location.host}/images/comsats.jpg`;
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
     
-    document.body.innerHTML = `
-      <div style="padding: 20px; font-family: Arial, sans-serif;">
-        <h2 style="margin-bottom: 20px;">${reportType.replace('_', ' ').toUpperCase()} Report</h2>
-        <p style="margin-bottom: 20px; color: #666;">Generated on: ${new Date().toLocaleString()}</p>
-        ${printHtml}
-      </div>
+    const reportTitle = reportType.replace(/_/g, ' ').toUpperCase();
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow pop-ups to print');
+      return;
+    }
+
+    const styles = `
+      <style>
+        @media print {
+          body { margin: 0; padding: 0; }
+          @page { size: A4; margin: 1.5cm; }
+        }
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        body {
+          font-family: 'Times New Roman', Times, serif;
+          background: white;
+          padding: 20px;
+        }
+        .header {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          margin-bottom: 30px;
+          border-bottom: 2px solid #1a5276;
+          padding-bottom: 20px;
+        }
+        .logo-title-row {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 20px;
+          margin-bottom: 5px;
+        }
+        .logo {
+          max-width: 70px;
+          max-height: 70px;
+        }
+        .university-name {
+          font-size: 22px;
+          font-weight: bold;
+          color: #1a5276;
+        }
+        .campus-name {
+          font-size: 14px;
+          color: #2c3e50;
+          text-align: center;
+        }
+        .document-title {
+          font-size: 20px;
+          font-weight: bold;
+          text-align: center;
+          margin: 25px 0 10px 0;
+          text-transform: uppercase;
+          color: #1a5276;
+        }
+        .report-info {
+          text-align: center;
+          margin: 20px 0;
+          padding: 10px;
+          background: #f8f9fa;
+        }
+        .report-type {
+          font-size: 18px;
+          font-weight: bold;
+        }
+        .meta-info {
+          font-size: 12px;
+          color: #7f8c8d;
+          margin-top: 5px;
+        }
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin: 20px 0;
+        }
+        th {
+          background: #1a5276;
+          color: white;
+          padding: 10px;
+          text-align: center;
+          font-size: 12px;
+        }
+        td {
+          padding: 8px;
+          text-align: center;
+          border-bottom: 1px solid #ddd;
+          font-size: 11px;
+        }
+        .footer-stats {
+          display: flex;
+          justify-content: space-between;
+          margin: 20px 0;
+          padding-top: 10px;
+          border-top: 1px solid #ddd;
+        }
+        .signatures {
+          display: flex;
+          justify-content: space-between;
+          margin-top: 40px;
+        }
+        .signature-box {
+          text-align: center;
+          width: 250px;
+        }
+        .signature-line {
+          border-top: 1px solid black;
+          margin-top: 40px;
+          padding-top: 5px;
+        }
+        .disclaimer {
+          text-align: center;
+          font-size: 10px;
+          color: gray;
+          margin-top: 20px;
+        }
+        .status-pending { color: #d97706; font-weight: bold; }
+        .status-approved { color: #10b981; font-weight: bold; }
+        .status-rejected { color: #ef4444; font-weight: bold; }
+        .summary-card {
+          text-align: center;
+          padding: 15px;
+          border: 1px solid #ddd;
+          border-radius: 8px;
+          margin: 10px;
+        }
+        .summary-value {
+          font-size: 24px;
+          font-weight: bold;
+          color: #1a5276;
+        }
+        .summary-label {
+          font-size: 12px;
+          color: #666;
+          margin-top: 5px;
+        }
+        .summary-grid {
+          display: flex;
+          justify-content: space-between;
+          gap: 15px;
+          margin: 20px 0;
+        }
+      </style>
     `;
-    
-    window.print();
-    document.body.innerHTML = originalContents;
-    window.location.reload();
+
+    // Get the table HTML from the current page
+    const tableHtml = printContent.querySelector('table')?.outerHTML || '';
+    const summaryHtml = printContent.querySelector('.grid')?.outerHTML || '';
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${reportTitle} Report</title>
+          ${styles}
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo-title-row">
+              <img src="${logoUrl}" alt="COMSATS Logo" class="logo" onerror="this.style.display='none'">
+              <div class="university-name">COMSATS UNIVERSITY ISLAMABAD</div>
+            </div>
+            <div class="campus-name">ABBOTTABAD CAMPUS</div>
+          </div>
+
+          <div class="document-title">${reportTitle} REPORT</div>
+          
+          <div class="report-info">
+            <div class="report-type">${reportTitle.replace(/_/g, ' ')}</div>
+            <div class="meta-info">Generated: ${currentDate}</div>
+          </div>
+
+          ${reportType === 'summary' ? `
+            <div class="summary-grid">
+              <div class="summary-card">
+                <div class="summary-value">${data?.totalStudents || 0}</div>
+                <div class="summary-label">Total Students</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-value">${data?.totalScholarships || 0}</div>
+                <div class="summary-label">Total Scholarships</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-value">${data?.totalApplications || 0}</div>
+                <div class="summary-label">Total Applications</div>
+              </div>
+              <div class="summary-card">
+                <div class="summary-value">${data?.rejectionRate || 0}%</div>
+                <div class="summary-label">Rejection Rate</div>
+              </div>
+            </div>
+          ` : `
+            ${tableHtml}
+          `}
+
+          <div class="footer-stats">
+            <span><b>Total Records:</b> ${reportType === 'summary' ? '4' : data?.applications?.length || data?.scholarships?.length || data?.students?.length || data?.meritLists?.length || 0}</span>
+            <span><b>Generated On:</b> ${currentDate}</span>
+          </div>
+
+          <div class="signatures">
+            <div class="signature-box">
+              <div class="signature-line"></div>
+              <div>Registrar</div>
+              <div style="font-size: 11px;">COMSATS University Islamabad</div>
+            </div>
+            <div class="signature-box">
+              <div class="signature-line"></div>
+              <div>Director</div>
+              <div style="font-size: 11px;">Abbottabad Campus</div>
+            </div>
+          </div>
+
+          <div class="disclaimer">
+            * This is a system generated document. No signature is required. *
+          </div>
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.print();
   };
 
   const getStatusBadge = (status: string) => {
@@ -253,7 +473,7 @@ export default function AdminReportsPage() {
                         <th className="p-3 text-left text-sm font-semibold">Scholarship</th>
                         <th className="p-3 text-left text-sm font-semibold">Status</th>
                         <th className="p-3 text-left text-sm font-semibold rounded-tr-lg">Submitted</th>
-                       </tr>
+                      </tr>
                     </thead>
                     <tbody>
                       {data.applications.map((app: any, idx: number) => (
