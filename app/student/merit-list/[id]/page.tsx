@@ -1,11 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { 
-  ArrowLeft, 
-  Award, 
-  Calendar, 
-  Download, 
+import {
+  ArrowLeft,
+  Award,
+  Calendar,
+  Download,
   Users,
   CheckCircle,
   Clock,
@@ -13,6 +13,7 @@ import {
   Printer
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
+import jsPDF from 'jspdf';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -42,7 +43,7 @@ export default function StudentMeritDetailPage() {
   const params = useParams();
   const router = useRouter();
   const scholarshipId = params.id as string;
-  
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [scholarship, setScholarship] = useState<Scholarship | null>(null);
@@ -50,6 +51,8 @@ export default function StudentMeritDetailPage() {
   const [studentRegNo, setStudentRegNo] = useState('');
   const [studentEntry, setStudentEntry] = useState<MeritEntry | null>(null);
   const [isTiered, setIsTiered] = useState(false);
+  const [showAwardModal, setShowAwardModal] = useState(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
 
   useEffect(() => {
     const regNo = localStorage.getItem('studentRegno') || '';
@@ -86,9 +89,9 @@ export default function StudentMeritDetailPage() {
             .eq('scholarship_id', scholarshipId)
             .eq('student_regno', entry.student_regno)
             .single();
-          
+
           const studentName = appData?.application_data?.student_name || entry.student_regno;
-          
+
           return {
             ...entry,
             student_name: studentName
@@ -107,21 +110,21 @@ export default function StudentMeritDetailPage() {
     }
   };
 
-const printMeritList = () => {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert('Please allow pop-ups to print');
-    return;
-  }
+  const printMeritList = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('Please allow pop-ups to print');
+      return;
+    }
 
-  const logoUrl = `${window.location.protocol}//${window.location.host}/images/comsats.jpg`;
-  const currentDate = new Date().toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
+    const logoUrl = `${window.location.protocol}//${window.location.host}/images/comsats.jpg`;
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
 
-  const styles = `
+    const styles = `
     <style>
       @media print {
         body { margin: 0; padding: 0; }
@@ -253,33 +256,33 @@ const printMeritList = () => {
     </style>
   `;
 
-  let tableHeaders = `
+    let tableHeaders = `
     <th>Rank</th>
     <th>Student Name</th>
     <th>Registration No</th>
     <th>Score</th>
   `;
-  
-  if (isTiered) {
-    tableHeaders += `
+
+    if (isTiered) {
+      tableHeaders += `
       <th>Awarded Tier</th>
       <th>Benefit</th>
     `;
-  }
-  tableHeaders += `<th>Status</th>`;
+    }
+    tableHeaders += `<th>Status</th>`;
 
-  let tableRows = '';
-  if (isTiered) {
-    tableRows = meritList.map(item => {
-      let statusClass = '';
-      if (item.status === 'selected') statusClass = 'selected';
-      else if (item.status === 'waitlist') statusClass = 'waitlist';
-      else if (item.status === 'awarded') statusClass = 'awarded';
-      
-      const isCurrentStudent = item.student_regno === studentRegNo;
-      const rowClass = isCurrentStudent ? 'class="your-rank"' : '';
-      
-      return `
+    let tableRows = '';
+    if (isTiered) {
+      tableRows = meritList.map(item => {
+        let statusClass = '';
+        if (item.status === 'selected') statusClass = 'selected';
+        else if (item.status === 'waitlist') statusClass = 'waitlist';
+        else if (item.status === 'awarded') statusClass = 'awarded';
+
+        const isCurrentStudent = item.student_regno === studentRegNo;
+        const rowClass = isCurrentStudent ? 'class="your-rank"' : '';
+
+        return `
         <tr ${rowClass}>
           <td><b>${item.rank}</b>${isCurrentStudent ? ' <span style="background:#dbeafe; padding:2px 6px; border-radius:12px; font-size:10px;">You</span>' : ''}</td>
           <td>${item.student_name || item.student_regno}</td>
@@ -290,18 +293,18 @@ const printMeritList = () => {
           <td class="${statusClass}">${item.status.toUpperCase()}</td>
         </tr>
       `;
-    }).join('');
-  } else {
-    tableRows = meritList.map(item => {
-      let statusClass = '';
-      if (item.status === 'selected') statusClass = 'selected';
-      else if (item.status === 'waitlist') statusClass = 'waitlist';
-      else if (item.status === 'awarded') statusClass = 'awarded';
-      
-      const isCurrentStudent = item.student_regno === studentRegNo;
-      const rowClass = isCurrentStudent ? 'class="your-rank"' : '';
-      
-      return `
+      }).join('');
+    } else {
+      tableRows = meritList.map(item => {
+        let statusClass = '';
+        if (item.status === 'selected') statusClass = 'selected';
+        else if (item.status === 'waitlist') statusClass = 'waitlist';
+        else if (item.status === 'awarded') statusClass = 'awarded';
+
+        const isCurrentStudent = item.student_regno === studentRegNo;
+        const rowClass = isCurrentStudent ? 'class="your-rank"' : '';
+
+        return `
         <tr ${rowClass}>
           <td><b>${item.rank}</b>${isCurrentStudent ? ' <span style="background:#dbeafe; padding:2px 6px; border-radius:12px; font-size:10px;">You</span>' : ''}</td>
           <td>${item.student_name || item.student_regno}</td>
@@ -310,17 +313,17 @@ const printMeritList = () => {
           <td class="${statusClass}">${item.status.toUpperCase()}</td>
         </tr>
       `;
-    }).join('');
-  }
+      }).join('');
+    }
 
-  const selectedCount = meritList.filter(m => m.status === 'selected' || m.status === 'awarded').length;
-  const totalApplicants = meritList.length;
-  const waitlistCount = meritList.filter(m => m.status === 'waitlist').length;
+    const selectedCount = meritList.filter(m => m.status === 'selected' || m.status === 'awarded').length;
+    const totalApplicants = meritList.length;
+    const waitlistCount = meritList.filter(m => m.status === 'waitlist').length;
 
-  // Find current student's rank for highlighting
-  const currentStudentRank = studentEntry?.rank;
+    // Find current student's rank for highlighting
+    const currentStudentRank = studentEntry?.rank;
 
-  printWindow.document.write(`
+    printWindow.document.write(`
     <!DOCTYPE html>
     <html>
       <head>
@@ -378,9 +381,9 @@ const printMeritList = () => {
     </html>
   `);
 
-  printWindow.document.close();
-  printWindow.print();
-};
+    printWindow.document.close();
+    printWindow.print();
+  };
 
   const downloadAsCSV = () => {
     let headers = ['Rank', 'Student Name', 'Reg No', 'Score', 'Status'];
@@ -420,9 +423,9 @@ const printMeritList = () => {
 
   const getStatusBadge = (status: string, isCurrentStudent: boolean) => {
     const baseClass = "px-3 py-1 text-xs rounded-full font-medium w-fit";
-    
+
     if (isCurrentStudent) {
-      switch(status) {
+      switch (status) {
         case 'selected':
         case 'awarded':
           return <span className={`${baseClass} bg-green-100 text-green-800 border border-green-500`}>Selected</span>;
@@ -432,8 +435,8 @@ const printMeritList = () => {
           return <span className={`${baseClass} bg-gray-100 text-gray-800 border border-gray-500`}>Pending</span>;
       }
     }
-    
-    switch(status) {
+
+    switch (status) {
       case 'selected':
       case 'awarded':
         return <span className={`${baseClass} bg-green-100 text-green-800`}>Selected</span>;
@@ -456,6 +459,170 @@ const printMeritList = () => {
 
   const selectedCount = meritList.filter(m => m.status === 'selected' || m.status === 'awarded').length;
   const cutoffScore = selectedCount > 0 ? meritList[selectedCount - 1]?.total_score : 0;
+
+  const generateAwardLetterPDF = async () => {
+    if (!studentEntry || !scholarship) return;
+
+    setGeneratingPDF(true);
+
+    try {
+      const doc = new jsPDF();
+      const logoUrl = `${window.location.protocol}//${window.location.host}/images/comsats.jpg`;
+      const currentDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+
+      const img = new Image();
+      img.crossOrigin = "Anonymous";
+      img.src = logoUrl;
+
+      img.onload = () => {
+        doc.addImage(img, 'JPEG', 15, 10, 25, 25);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('COMSATS UNIVERSITY ISLAMABAD', 105, 22, { align: 'center' });
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.text('ABBOTTABAD CAMPUS', 105, 30, { align: 'center' });
+        doc.setDrawColor(26, 82, 118);
+        doc.setLineWidth(0.5);
+        doc.line(15, 38, 195, 38);
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(26, 82, 118);
+        doc.text('SCHOLARSHIP AWARD LETTER', 105, 55, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Date: ${currentDate}`, 105, 68, { align: 'center' });
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text('This is to certify that', 105, 90, { align: 'center' });
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(26, 82, 118);
+        doc.text(studentEntry.student_name || studentEntry.student_regno, 105, 108, { align: 'center' });
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Registration Number: ${studentEntry.student_regno}`, 105, 122, { align: 'center' });
+        doc.setFontSize(12);
+        doc.text('has been awarded the', 105, 140, { align: 'center' });
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(26, 82, 118);
+        doc.text(scholarship.title, 105, 155, { align: 'center' });
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
+
+        let awardText = '';
+        if (isTiered && studentEntry.award_tier) {
+          awardText = `${studentEntry.award_tier} - ${studentEntry.award_description}`;
+        } else {
+          awardText = `Score: ${studentEntry.total_score}%`;
+        }
+        doc.text(awardText, 105, 172, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Valid for the academic year 2026', 105, 195, { align: 'center' });
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.3);
+        doc.line(40, 225, 90, 225);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Registrar', 65, 235, { align: 'center' });
+        doc.line(120, 225, 170, 225);
+        doc.text('Director', 145, 235, { align: 'center' });
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text('COMSATS University Islamabad', 65, 242, { align: 'center' });
+        doc.text('Abbottabad Campus', 145, 242, { align: 'center' });
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text('* This is a system generated document. No signature is required. *', 105, 260, { align: 'center' });
+        doc.save(`Award_Letter_${studentEntry.student_regno}.pdf`);
+        setGeneratingPDF(false);
+        setShowAwardModal(false);
+      };
+
+      img.onerror = () => {
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('COMSATS UNIVERSITY ISLAMABAD', 105, 22, { align: 'center' });
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.text('ABBOTTABAD CAMPUS', 105, 30, { align: 'center' });
+        doc.setDrawColor(26, 82, 118);
+        doc.setLineWidth(0.5);
+        doc.line(15, 38, 195, 38);
+        doc.setFontSize(20);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(26, 82, 118);
+        doc.text('SCHOLARSHIP AWARD LETTER', 105, 55, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Date: ${currentDate}`, 105, 68, { align: 'center' });
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0);
+        doc.text('This is to certify that', 105, 90, { align: 'center' });
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(26, 82, 118);
+        doc.text(studentEntry.student_name || studentEntry.student_regno, 105, 108, { align: 'center' });
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
+        doc.text(`Registration Number: ${studentEntry.student_regno}`, 105, 122, { align: 'center' });
+        doc.setFontSize(12);
+        doc.text('has been awarded the', 105, 140, { align: 'center' });
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(26, 82, 118);
+        doc.text(scholarship.title, 105, 155, { align: 'center' });
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
+
+        let awardText = '';
+        if (isTiered && studentEntry.award_tier) {
+          awardText = `${studentEntry.award_tier} - ${studentEntry.award_description}`;
+        } else {
+          awardText = `Score: ${studentEntry.total_score}%`;
+        }
+        doc.text(awardText, 105, 172, { align: 'center' });
+        doc.setFontSize(10);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Valid for the academic year 2026', 105, 195, { align: 'center' });
+        doc.line(40, 225, 90, 225);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
+        doc.text('Registrar', 65, 235, { align: 'center' });
+        doc.line(120, 225, 170, 225);
+        doc.text('Director', 145, 235, { align: 'center' });
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text('COMSATS University Islamabad', 65, 242, { align: 'center' });
+        doc.text('Abbottabad Campus', 145, 242, { align: 'center' });
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text('* This is a system generated document. No signature is required. *', 105, 260, { align: 'center' });
+        doc.save(`Award_Letter_${studentEntry.student_regno}.pdf`);
+        setGeneratingPDF(false);
+        setShowAwardModal(false);
+      };
+
+    } catch (error) {
+      console.error('PDF Error:', error);
+      alert('Error generating award letter');
+      setGeneratingPDF(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -518,6 +685,17 @@ const printMeritList = () => {
                     <span className="text-purple-600 ml-2">{studentEntry.award_description}</span>
                   </p>
                 </div>
+              </div>
+            )}
+            {/* Award Letter Button - Only for selected students */}
+            {(studentEntry.status === 'selected' || studentEntry.status === 'awarded') && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={() => setShowAwardModal(true)}
+                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                >
+                  View Award Letter
+                </button>
               </div>
             )}
           </div>
@@ -609,27 +787,26 @@ const printMeritList = () => {
                 {meritList.map((entry) => {
                   const isCurrentStudent = entry.student_regno === studentRegNo;
                   return (
-                    <tr 
-                      key={entry.id} 
+                    <tr
+                      key={entry.id}
                       className={`hover:bg-gray-50 ${isCurrentStudent ? 'bg-blue-50' : ''}`}
                     >
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium ${
-                          entry.rank <= 3 
-                            ? 'bg-yellow-100 text-yellow-800' 
-                            : entry.status === 'selected' || entry.status === 'awarded'
+                        <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium ${entry.rank <= 3
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : entry.status === 'selected' || entry.status === 'awarded'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
-                        }`}>
+                          }`}>
                           {entry.rank}
                         </span>
-                       </td>
+                      </td>
                       <td className="px-4 py-3">
                         <div className="text-gray-900 truncate max-w-[180px]" title={entry.student_name || entry.student_regno}>
                           {entry.student_name || entry.student_regno}
                           {isCurrentStudent && <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">You</span>}
                         </div>
-                       </td>
+                      </td>
                       <td className="px-4 py-3 text-gray-600 text-sm">{entry.student_regno}</td>
                       <td className="px-4 py-3 font-semibold text-gray-900">{entry.total_score.toFixed(1)}%</td>
                       {isTiered && (
@@ -650,6 +827,115 @@ const printMeritList = () => {
             </table>
           </div>
         </div>
+        {/* Award Letter Modal */}
+{showAwardModal && studentEntry && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-auto">
+      {/* Modal Header */}
+      <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+        <h2 className="text-xl font-bold text-gray-900">Award Letter</h2>
+        <button
+          onClick={() => setShowAwardModal(false)}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          ✕
+        </button>
+      </div>
+
+      {/* Award Letter Content */}
+      <div className="p-8">
+        <div className="text-center mb-6">
+          <img 
+            src="/images/comsats.jpg" 
+            alt="COMSATS Logo" 
+            className="w-20 h-20 mx-auto mb-3"
+            onError={(e) => (e.currentTarget.style.display = 'none')}
+          />
+          <h2 className="text-xl font-bold text-blue-900">COMSATS UNIVERSITY ISLAMABAD</h2>
+          <p className="text-sm text-gray-600">ABBOTTABAD CAMPUS</p>
+          <div className="border-b-2 border-blue-900 mt-4 mb-6"></div>
+          <h3 className="text-lg font-bold uppercase text-blue-800">Scholarship Award Letter</h3>
+        </div>
+
+        <div className="space-y-4">
+          <p className="text-center text-gray-600">Date: {new Date().toLocaleDateString()}</p>
+          
+          <p className="text-center">This is to certify that</p>
+          
+          <p className="text-center text-xl font-bold text-blue-800">
+            {studentEntry.student_name || studentEntry.student_regno}
+          </p>
+          
+          <p className="text-center">Registration Number: <strong>{studentEntry.student_regno}</strong></p>
+          
+          <p className="text-center">has been awarded the</p>
+          
+          <p className="text-center text-lg font-bold text-blue-800">
+            {scholarship?.title}
+          </p>
+          
+          <div className="text-center bg-green-50 p-4 rounded-lg">
+            <p className="font-semibold">
+              {isTiered && studentEntry.award_tier ? (
+                <>
+                  {studentEntry.award_tier}<br />
+                  <span className="text-green-700">{studentEntry.award_description}</span>
+                </>
+              ) : (
+                `Score: ${studentEntry.total_score}%`
+              )}
+            </p>
+          </div>
+          
+          <p className="text-center text-sm text-gray-500">Valid for the academic year 2026</p>
+        </div>
+
+        <div className="flex justify-between mt-12 pt-8">
+          <div className="text-center">
+            <div className="border-t border-black w-32 pt-2"></div>
+            <p className="text-sm">Registrar</p>
+            <p className="text-xs text-gray-500">COMSATS University Islamabad</p>
+          </div>
+          <div className="text-center">
+            <div className="border-t border-black w-32 pt-2"></div>
+            <p className="text-sm">Director</p>
+            <p className="text-xs text-gray-500">Abbottabad Campus</p>
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-gray-400 mt-8">
+          * This is a system generated document. No signature is required. *
+        </p>
+      </div>
+
+      {/* Modal Footer Buttons */}
+      <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-end gap-3">
+        <button
+          onClick={() => setShowAwardModal(false)}
+          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
+        >
+          Close
+        </button>
+        <button
+          onClick={generateAwardLetterPDF}
+          disabled={generatingPDF}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+        >
+          {generatingPDF ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              Generating...
+            </>
+          ) : (
+            <>
+              Download PDF
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
       </div>
     </div>
   );
