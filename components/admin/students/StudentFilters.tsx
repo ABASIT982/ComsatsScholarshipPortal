@@ -46,7 +46,7 @@ export function StudentFilters({ students, onFilteredStudents, loading = false }
 
     // Level filter - match both cases
     if (filters.level !== 'all') {
-      filtered = filtered.filter(student => 
+      filtered = filtered.filter(student =>
         student.level?.toLowerCase() === filters.level.toLowerCase()
       )
     }
@@ -78,7 +78,7 @@ export function StudentFilters({ students, onFilteredStudents, loading = false }
   // Export to CSV
   const exportToCSV = () => {
     let filtered = [...students]
-    
+
     // Apply current filters to export
     if (filters.search) {
       const searchLower = filters.search.toLowerCase()
@@ -124,7 +124,7 @@ export function StudentFilters({ students, onFilteredStudents, loading = false }
   // Print students list - Professional format
   const printStudents = () => {
     let filtered = [...students]
-    
+
     // Apply current filters to print
     if (filters.search) {
       const searchLower = filters.search.toLowerCase()
@@ -293,8 +293,8 @@ export function StudentFilters({ students, onFilteredStudents, loading = false }
           <td>${s.name}</td>
           <td>${s.regno}</td>
           <td>${s.email || '-'}</td>
-          <td>${s.level === 'undergraduate' ? 'Undergraduate' : 'Graduate'}</td>
-          <td>${s.session || '-'}</td>
+<td>${s.level === 'undergraduate' ? 'Undergraduate' : (s.level === 'graduate' ? 'Graduate' : s.level || 'N/A')}</td>         
+ <td>${s.session || '-'}</td>
           <td>${s.department || '-'}</td>
           <td class="${statusClass}">${s.status === 'active' ? 'Active' : 'Inactive'}</td>
         </tr>
@@ -383,7 +383,7 @@ export function StudentFilters({ students, onFilteredStudents, loading = false }
   return (
     <div className="bg-white p-6 rounded-xl border border-gray-200">
       <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-        
+
         {/* Search */}
         <div className="flex-1 w-full lg:w-auto">
           <div className="relative">
@@ -400,7 +400,7 @@ export function StudentFilters({ students, onFilteredStudents, loading = false }
 
         {/* Filters */}
         <div className="flex flex-wrap gap-3">
-          
+
           {/* Session Filter */}
           <select
             value={filters.session}
@@ -448,7 +448,7 @@ export function StudentFilters({ students, onFilteredStudents, loading = false }
           </select>
 
           {/* Export & Print Buttons */}
-          <button 
+          <button
             onClick={exportToCSV}
             className="flex items-center gap-2 px-4 py-2 text-green-700 bg-green-100 rounded-lg hover:bg-green-200 text-sm"
           >
@@ -456,7 +456,7 @@ export function StudentFilters({ students, onFilteredStudents, loading = false }
             Export CSV
           </button>
 
-          <button 
+          <button
             onClick={printStudents}
             className="flex items-center gap-2 px-4 py-2 text-purple-700 bg-purple-100 rounded-lg hover:bg-purple-200 text-sm"
           >
