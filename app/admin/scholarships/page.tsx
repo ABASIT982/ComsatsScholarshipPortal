@@ -1,7 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Plus, Edit, Calendar, Trash2, Award, Settings, ListChecks } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Scholarship {
   id: string;
@@ -16,6 +18,7 @@ interface Scholarship {
 }
 
 export default function AdminScholarshipsPage() {
+  const router = useRouter();
   const [scholarships, setScholarships] = useState<Scholarship[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,18 +39,61 @@ export default function AdminScholarshipsPage() {
       setScholarships(data.scholarships || []);
     } catch (err: any) {
       setError(err.message);
+      toast.error(`Failed: ${err.message}`, {
+        duration: 3000,
+        position: 'top-center',
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const deleteScholarship = async (scholarshipId: string) => {
-    if (!confirm('Are you sure you want to delete this scholarship? This action cannot be undone.')) {
-      return;
-    }
+  // ✅ Delete using toast confirmation (same as student delete)
+  const handleDeleteScholarship = (scholarship: Scholarship) => {
+    toast.dismiss();
+    toast(
+      (t) => (
+        <div className="text-center">
+          <p className="font-bold text-red-600 mb-2">Delete Scholarship?</p>
+          <p className="text-sm text-gray-600 mb-1">{scholarship.title}</p>
+          <p className="text-xs text-red-500 font-semibold mb-3">⚠️ This action cannot be undone!</p>
+          <p className="text-xs text-gray-500 mb-4">All related applications and merit lists will also be deleted.</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id);
+                confirmDelete(scholarship);
+              }}
+              className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 min-w-[100px]"
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="px-4 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 min-w-[80px]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        duration: 8000,
+        position: 'top-center',
+        style: {
+          background: 'white',
+          padding: '20px',
+          borderRadius: '12px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          maxWidth: '340px',
+        },
+      }
+    );
+  };
 
+  const confirmDelete = async (scholarship: Scholarship) => {
     try {
-      const response = await fetch(`/api/scholarships/${scholarshipId}`, {
+      const response = await fetch(`/api/scholarships/${scholarship.id}`, {
         method: 'DELETE',
       });
 
@@ -57,11 +103,26 @@ export default function AdminScholarshipsPage() {
         throw new Error(data.error || 'Failed to delete scholarship');
       }
 
-      setScholarships(prev => prev.filter(s => s.id !== scholarshipId));
-      alert('Scholarship deleted successfully!');
+      toast.dismiss();
+      toast.success(`${scholarship.title} deleted`, {
+        duration: 3000,
+        position: 'top-center',
+        style: {
+          background: '#fee2e2',
+          color: '#991b1b',
+          borderRadius: '8px',
+          padding: '10px 16px',
+        },
+      });
       
+      setScholarships(prev => prev.filter(s => s.id !== scholarship.id));
+
     } catch (error: any) {
-      alert('Error deleting scholarship: ' + error.message);
+      toast.dismiss();
+      toast.error(`Failed: ${error.message}`, {
+        duration: 3000,
+        position: 'top-center',
+      });
     }
   };
 
@@ -72,6 +133,18 @@ export default function AdminScholarshipsPage() {
       day: 'numeric'
     });
   };
+
+  // Check for update success message
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('updated') === 'true') {
+      toast.success('Scholarship updated', {
+        duration: 3000,
+        position: 'top-center',
+      });
+      window.history.replaceState({}, '', '/admin/scholarships');
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -86,6 +159,8 @@ export default function AdminScholarshipsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
+        <Toaster position="top-center" />
+
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -132,15 +207,14 @@ export default function AdminScholarshipsPage() {
                 {/* Status Badge */}
                 <div className="flex justify-between items-start mb-4">
                   <span
-                    className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      scholarship.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-gray-100 text-gray-800'
-                    }`}
+                    className={`px-3 py-1 rounded-full text-sm font-medium ${scholarship.status === 'active'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-gray-100 text-gray-800'
+                      }`}
                   >
                     {scholarship.status}
                   </span>
-                  
+
                   {/* Actions */}
                   <div className="flex gap-1">
                     <Link
@@ -151,7 +225,7 @@ export default function AdminScholarshipsPage() {
                       <Edit size={16} />
                     </Link>
                     <button
-                      onClick={() => deleteScholarship(scholarship.id)}
+                      onClick={() => handleDeleteScholarship(scholarship)}
                       className="flex items-center justify-center w-8 h-8 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
                       title="Delete Scholarship"
                     >
@@ -181,7 +255,7 @@ export default function AdminScholarshipsPage() {
                       <Settings size={12} /> No Criteria
                     </span>
                   )}
-                  
+
                   {scholarship.merit_list_generated && (
                     <span className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded ml-2">
                       <ListChecks size={12} /> Merit Generated
@@ -193,28 +267,29 @@ export default function AdminScholarshipsPage() {
                 <div className="flex gap-2 mb-4">
                   <Link
                     href={`/admin/scholarships/${scholarship.id}?tab=crieteria`}
-                    className={`flex-1 text-center px-3 py-2 text-xs rounded-lg transition-colors ${
-                      scholarship.scoring_criteria 
-                        ? 'bg-green-600 text-white hover:bg-green-700' 
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
+                    className={`flex-1 text-center px-3 py-2 text-xs rounded-lg transition-colors ${scholarship.scoring_criteria
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                      }`}
                   >
                     {scholarship.scoring_criteria ? 'Edit Criteria' : 'Set Criteria'}
                   </Link>
-                  
+
                   <Link
                     href={`/admin/merit/${scholarship.id}`}
-                    className={`flex-1 text-center px-3 py-2 text-xs rounded-lg transition-colors ${
-                      scholarship.merit_list_generated
-                        ? 'bg-purple-600 text-white hover:bg-purple-700'
-                        : scholarship.scoring_criteria
+                    className={`flex-1 text-center px-3 py-2 text-xs rounded-lg transition-colors ${scholarship.merit_list_generated
+                      ? 'bg-purple-600 text-white hover:bg-purple-700'
+                      : scholarship.scoring_criteria
                         ? 'bg-gray-800 text-white hover:bg-gray-900'
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
+                      }`}
                     onClick={(e) => {
                       if (!scholarship.scoring_criteria) {
                         e.preventDefault();
-                        alert('Please set scoring criteria first');
+                        toast.error('Please set scoring criteria first', {
+                          duration: 3000,
+                          position: 'top-center',
+                        });
                       }
                     }}
                   >

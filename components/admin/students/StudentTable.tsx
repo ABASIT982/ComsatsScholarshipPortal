@@ -1,5 +1,5 @@
 'use client'
-import { Eye, Edit, Mail, UserCheck, UserX, Clock } from 'lucide-react'
+import { Eye, Edit, Mail, UserCheck, UserX, Clock, Trash2, Power, PowerOff } from 'lucide-react'
 
 interface Student {
   id: string
@@ -20,10 +20,21 @@ interface StudentTableProps {
   loading: boolean
   onViewStudent: (student: Student) => void
   onEditStudent: (student: Student) => void
+  onDeactivateStudent: (student: Student) => void
+  onActivateStudent: (student: Student) => void
+  onDeleteStudent: (student: Student) => void
 }
 
-export function StudentTable({ students, loading, onViewStudent, onEditStudent }: StudentTableProps) {
-  
+export function StudentTable({
+  students,
+  loading,
+  onViewStudent,
+  onEditStudent,
+  onDeactivateStudent,
+  onActivateStudent,
+  onDeleteStudent
+}: StudentTableProps) {
+
   if (loading) {
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -97,8 +108,8 @@ export function StudentTable({ students, loading, onViewStudent, onEditStudent }
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     {student.avatar ? (
-                      <img 
-                        src={student.avatar} 
+                      <img
+                        src={student.avatar}
                         alt={student.name}
                         className="w-10 h-10 rounded-full mr-3"
                       />
@@ -128,25 +139,43 @@ export function StudentTable({ students, loading, onViewStudent, onEditStudent }
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                   <div className="flex items-center gap-2">
-                    <button 
+                    <button
                       onClick={() => onViewStudent(student)}
                       className="text-blue-600 hover:text-blue-900 p-1 rounded transition-colors"
                       title="View Profile"
                     >
                       <Eye className="w-4 h-4" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => onEditStudent(student)}
                       className="text-gray-600 hover:text-gray-900 p-1 rounded transition-colors"
                       title="Edit Student"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
-                    <button 
-                      className="text-green-600 hover:text-green-900 p-1 rounded transition-colors"
-                      title="Send Email"
+                    {student.status === 'active' ? (
+                      <button
+                        onClick={() => onDeactivateStudent(student)}
+                        className="text-green-600 hover:text-green-900 p-1 rounded transition-colors"
+                        title="Deactivate Student (Cannot Login)"
+                      >
+                        <Power className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onActivateStudent(student)}
+                        className="text-red-600 hover:text-red-900 p-1 rounded transition-colors"
+                        title="Activate Student (Can Login)"
+                      >
+                        <PowerOff className="w-4 h-4" />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => onDeleteStudent(student)}
+                      className="text-red-600 hover:text-red-900 p-1 rounded transition-colors"
+                      title="Permanently Delete Student"
                     >
-                      <Mail className="w-4 h-4" />
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </td>

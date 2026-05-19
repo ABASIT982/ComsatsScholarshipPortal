@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Calendar, User, Award, Mail, FileText, BookOpen, GraduationCap, Phone, MapPin } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Application {
   id: string;
@@ -63,7 +64,6 @@ export default function ApplicationDetailsPage() {
     });
   };
 
-  //----------------------------This is for Render dynamic form fields-----------------------------------
   const renderFormData = () => {
     if (!application?.application_data) return null;
 
@@ -77,8 +77,8 @@ export default function ApplicationDetailsPage() {
       'scholarship_title',
       'student_type',
       'scholarship_template',
-      'additional_info', // This is handled separately
-      'documents' // Keep documents separate
+      'additional_info',
+      'documents'
     ];
 
     const formFields = Object.entries(appData)
@@ -95,7 +95,6 @@ export default function ApplicationDetailsPage() {
     return formFields.length > 0 ? formFields : null;
   };
 
-  //---------------------------This is for Render documents section-------------------------------
   const renderDocuments = () => {
     const documents = application?.application_data?.documents;
     
@@ -200,6 +199,8 @@ export default function ApplicationDetailsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
+        <Toaster position="top-center" />
+
         <Link
           href="/admin/applications"
           className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
@@ -209,7 +210,7 @@ export default function ApplicationDetailsPage() {
         </Link>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-          {/*-----------------------------This is for Header --------------------------------------*/}
+          {/* Header */}
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-8 py-6 text-white">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
               <div>
@@ -232,7 +233,7 @@ export default function ApplicationDetailsPage() {
             </div>
           </div>
 
-          {/*-------------------------------This is for Navigation Tabs -----------------------------------------*/}
+          {/* Navigation Tabs */}
           <div className="border-b border-gray-200">
             <nav className="flex space-x-8 px-8">
               {['personal', 'application', 'documents'].map((tab) => (
@@ -254,10 +255,9 @@ export default function ApplicationDetailsPage() {
           </div>
 
           <div className="p-8">
-            {/*-------------------------------This is for Personal Information Tab --------------------------------*/}
+            {/* Personal Information Tab */}
             {activeTab === 'personal' && (
               <div className="grid md:grid-cols-2 gap-8">
-                {/*-------------------------------This is for Student Information --------------------------------*/}
                 <div className="space-y-6">
                   <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                     <User className="w-5 h-5 text-blue-600" />
@@ -296,7 +296,6 @@ export default function ApplicationDetailsPage() {
                   </div>
                 </div>
 
-                {/*-------------------------------This is for Scholarship & Status Information ------------------------------*/}
                 <div className="space-y-6">
                   <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                     <Award className="w-5 h-5 text-green-600" />
@@ -332,7 +331,7 @@ export default function ApplicationDetailsPage() {
               </div>
             )}
 
-            {/*-------------------------------This is for Application Data Tab -----------------------------------*/}
+            {/* Application Data Tab */}
             {activeTab === 'application' && (
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
@@ -340,7 +339,6 @@ export default function ApplicationDetailsPage() {
                   Application Form Data
                 </h2>
 
-                {/*----------------------------This is for Additional Information -------------------------------*/}
                 {application.application_data?.additional_info && (
                   <div className="mb-6">
                     <h3 className="text-lg font-semibold mb-3 text-gray-800">Personal Statement</h3>
@@ -352,7 +350,6 @@ export default function ApplicationDetailsPage() {
                   </div>
                 )}
 
-                {/*----------------------------This is for Dynamic Form Fields -------------------------------*/}
                 <div>
                   <h3 className="text-lg font-semibold mb-3 text-gray-800">Form Responses</h3>
                   <div className="bg-white border border-gray-200 rounded-lg divide-y">
@@ -368,31 +365,19 @@ export default function ApplicationDetailsPage() {
               </div>
             )}
 
-            {/*-----------------------------This is for Documents Tab ---------------------------*/}
+            {/* Documents Tab */}
             {activeTab === 'documents' && (
               <div className="space-y-6">
                 <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
                   <FileText className="w-5 h-5 text-blue-600" />
                   Uploaded Documents
                 </h2>
-                
-                {/* DEBUG: Show raw document data
-                <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <h3 className="font-semibold text-yellow-800 mb-2">Debug - Document Data</h3>
-                  <pre className="text-xs text-yellow-700 overflow-auto max-h-40">
-                    {JSON.stringify({
-                      hasDocuments: !!application?.application_data?.documents,
-                      documentKeys: application?.application_data?.documents ? Object.keys(application.application_data.documents) : [],
-                      documents: application?.application_data?.documents
-                    }, null, 2)}
-                  </pre>
-                </div> */}
 
                 {renderDocuments()}
               </div>
             )}
 
-            {/*-----------------------------This is for Action Buttons --------------------------------------*/}
+            {/* Action Buttons - Only for pending applications */}
             {application.status === 'pending' && (
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <h3 className="text-lg font-semibold mb-4">Review Application</h3>
@@ -408,17 +393,35 @@ export default function ApplicationDetailsPage() {
                         
                         if (response.ok) {
                           setApplication(prev => prev ? { ...prev, status: 'approved' } : null);
-                          alert('Application approved successfully!');
+                          toast.success('Application approved', {
+                            duration: 3000,
+                            position: 'top-center',
+                            style: {
+                              background: '#dcfce7',
+                              color: '#166534',
+                              borderRadius: '8px',
+                              padding: '10px 16px',
+                            },
+                          });
                           setTimeout(() => {
                             router.push('/admin/applications');
-                          }, 1000);
+                          }, 1500);
                         } else {
                           const data = await response.json();
                           throw new Error(data.error || 'Failed to approve application');
                         }
                       } catch (error: any) {
                         console.error('Approval error:', error);
-                        alert('Error: ' + error.message);
+                        toast.error(`Failed: ${error.message}`, {
+                          duration: 3000,
+                          position: 'top-center',
+                          style: {
+                            background: '#fee2e2',
+                            color: '#991b1b',
+                            borderRadius: '8px',
+                            padding: '10px 16px',
+                          },
+                        });
                       }
                     }}
                     className="bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium"
@@ -436,17 +439,35 @@ export default function ApplicationDetailsPage() {
                         
                         if (response.ok) {
                           setApplication(prev => prev ? { ...prev, status: 'rejected' } : null);
-                          alert('Application rejected successfully!');
+                          toast.success('Application rejected', {
+                            duration: 3000,
+                            position: 'top-center',
+                            style: {
+                              background: '#fee2e2',
+                              color: '#991b1b',
+                              borderRadius: '8px',
+                              padding: '10px 16px',
+                            },
+                          });
                           setTimeout(() => {
                             router.push('/admin/applications');
-                          }, 1000);
+                          }, 1500);
                         } else {
                           const data = await response.json();
                           throw new Error(data.error || 'Failed to reject application');
                         }
                       } catch (error: any) {
                         console.error('Rejection error:', error);
-                        alert('Error: ' + error.message);
+                        toast.error(`Failed: ${error.message}`, {
+                          duration: 3000,
+                          position: 'top-center',
+                          style: {
+                            background: '#fee2e2',
+                            color: '#991b1b',
+                            borderRadius: '8px',
+                            padding: '10px 16px',
+                          },
+                        });
                       }
                     }}
                     className="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors font-medium"

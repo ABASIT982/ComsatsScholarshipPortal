@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Save, Plus, Trash2, Layers } from 'lucide-react';
+import toast, { Toaster } from 'react-hot-toast';
 import { TEMPLATE_OPTIONS } from '@/lib/form-templates';
 
 type CustomField = {
@@ -26,7 +27,7 @@ export default function CreateScholarshipPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  
+
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -43,10 +44,10 @@ export default function CreateScholarshipPage() {
     { type: 'number', label: 'Matric Marks', name: 'matric_marks', required: true, placeholder: 'Enter Matric marks', max_value: 1100 },
     { type: 'number', label: 'NTS Score', name: 'nts_score', required: true, placeholder: 'Enter NTS score', max_value: 100 },
   ]);
-  
+
   // Scholarship Mode (Admin chooses)
   const [scholarshipMode, setScholarshipMode] = useState<'single' | 'tiered'>('single');
-  
+
   // Tiers - Start empty, admin adds what they want
   const [tiers, setTiers] = useState<Tier[]>([]);
 
@@ -56,19 +57,31 @@ const handleSubmit = async (e: React.FormEvent) => {
   setError('');
 
   if (!formData.title.trim() || !formData.description.trim() || !formData.deadline) {
-    setError('Please fill in all required fields');
+    toast.error('Please fill all required fields', {
+      duration: 3000,
+      position: 'top-center',
+      style: { background: '#fee2e2', color: '#991b1b', borderRadius: '8px', padding: '10px 16px' },
+    });
     setLoading(false);
     return;
   }
 
   if (scholarshipMode === 'single' && (!formData.number_of_awards || formData.number_of_awards <= 0)) {
-    setError('Number of awards is required for single scholarship mode');
+    toast.error('Number of awards required for single mode', {
+      duration: 3000,
+      position: 'top-center',
+      style: { background: '#fee2e2', color: '#991b1b', borderRadius: '8px', padding: '10px 16px' },
+    });
     setLoading(false);
     return;
   }
 
   if (scholarshipMode === 'tiered' && tiers.length === 0) {
-    setError('Please add at least one tier for tiered scholarship mode');
+    toast.error('Please add at least one tier', {
+      duration: 3000,
+      position: 'top-center',
+      style: { background: '#fee2e2', color: '#991b1b', borderRadius: '8px', padding: '10px 16px' },
+    });
     setLoading(false);
     return;
   }
@@ -78,12 +91,15 @@ const handleSubmit = async (e: React.FormEvent) => {
   today.setHours(0, 0, 0, 0);
   
   if (deadlineDate < today) {
-    setError('Deadline cannot be in the past');
+    toast.error('Deadline cannot be in the past', {
+      duration: 3000,
+      position: 'top-center',
+      style: { background: '#fee2e2', color: '#991b1b', borderRadius: '8px', padding: '10px 16px' },
+    });
     setLoading(false);
     return;
   }
 
-  // ✅ FIX: Use current tiers state directly
   const currentTiers = [...tiers];
   
   const submissionData = {
@@ -99,8 +115,6 @@ const handleSubmit = async (e: React.FormEvent) => {
     tiers: scholarshipMode === 'tiered' ? currentTiers : []
   };
 
-  console.log('📊 Submitting tiers:', currentTiers.length);
-
   try {
     const response = await fetch('/api/scholarships', {
       method: 'POST',
@@ -114,10 +128,22 @@ const handleSubmit = async (e: React.FormEvent) => {
       throw new Error(data.error || 'Failed to create scholarship');
     }
 
-    alert('Scholarship created successfully!');
-    router.push('/admin/scholarships');
+    toast.success(`${formData.title} created`, {
+      duration: 3000,
+      position: 'top-center',
+      style: { background: '#dcfce7', color: '#166534', borderRadius: '8px', padding: '10px 16px' },
+    });
+
+    setTimeout(() => {
+      router.push('/admin/scholarships');
+    }, 1500);
     
   } catch (err: any) {
+    toast.error(`Failed: ${err.message}`, {
+      duration: 3000,
+      position: 'top-center',
+      style: { background: '#fee2e2', color: '#991b1b', borderRadius: '8px', padding: '10px 16px' },
+    });
     setError(err.message);
   } finally {
     setLoading(false);
@@ -131,7 +157,7 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   const handleStudentTypeChange = (studentType: string, checked: boolean) => {
     setFormData(prev => {
-      const types = checked 
+      const types = checked
         ? [...prev.student_types, studentType]
         : prev.student_types.filter(t => t !== studentType);
       if (types.length === 0) return prev;
@@ -140,10 +166,10 @@ const handleSubmit = async (e: React.FormEvent) => {
   };
 
   const addCustomField = () => {
-    setCustomFields(prev => [...prev, { 
-      type: 'number', 
-      label: '', 
-      name: '', 
+    setCustomFields(prev => [...prev, {
+      type: 'number',
+      label: '',
+      name: '',
       required: false,
       placeholder: '',
       max_value: null
@@ -190,6 +216,19 @@ const handleSubmit = async (e: React.FormEvent) => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-4xl mx-auto">
+        {/* Toast Container */}
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              borderRadius: '8px',
+              padding: '10px 16px',
+              fontSize: '14px',
+            },
+          }}
+        />
+
         <div className="flex items-center gap-4 mb-8">
           <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
             <ArrowLeft size={20} />
@@ -431,7 +470,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   <h3 className="text-lg font-medium text-gray-900">Custom Form Fields</h3>
                   <button type="button" onClick={addCustomField} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">+ Add Field</button>
                 </div>
-                
+
                 {customFields.length === 0 ? (
                   <p className="text-gray-500 text-center py-4">No custom fields added yet. Click "Add Field" to start building your form.</p>
                 ) : (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import toast, { Toaster } from 'react-hot-toast';
 
 interface Dispute {
   id: string;
@@ -38,6 +39,10 @@ export default function AdminDisputesPage() {
       setDisputes(data.disputes || []);
     } catch (error) {
       console.error('Error fetching disputes:', error);
+      toast.error('Failed to load disputes', {
+        duration: 3000,
+        position: 'top-center',
+      });
     } finally {
       setLoading(false);
     }
@@ -45,7 +50,10 @@ export default function AdminDisputesPage() {
 
   const handleUpdateDispute = async (disputeId: string) => {
     if (!selectedStatus && !adminResponse) {
-      alert('Please select status or add response');
+      toast.error('Please select status or add response', {
+        duration: 3000,
+        position: 'top-center',
+      });
       return;
     }
 
@@ -63,18 +71,33 @@ export default function AdminDisputesPage() {
       });
 
       if (response.ok) {
-        alert('Dispute updated successfully');
+        toast.success('Dispute updated successfully', {
+          duration: 3000,
+          position: 'top-center',
+          style: {
+            background: '#dcfce7',
+            color: '#166534',
+            borderRadius: '8px',
+            padding: '10px 16px',
+          },
+        });
         fetchDisputes();
         setSelectedDispute(null);
         setAdminResponse('');
         setSelectedStatus('');
       } else {
         const error = await response.json();
-        alert(error.error || 'Failed to update dispute');
+        toast.error(error.error || 'Failed to update dispute', {
+          duration: 3000,
+          position: 'top-center',
+        });
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Network error');
+      toast.error('Network error', {
+        duration: 3000,
+        position: 'top-center',
+      });
     } finally {
       setUpdating(false);
     }
@@ -112,30 +135,34 @@ export default function AdminDisputesPage() {
 
   return (
     <div className="p-6">
+      <Toaster position="top-center" />
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Manage Disputes & Complaints</h1>
         <p className="text-gray-500 mt-1">Review and respond to student disputes</p>
       </div>
 
+      {/* Stats Cards - Original design kept */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-lg shadow p-4 ">
+        <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-500">Pending</p>
           <p className="text-2xl font-bold">{getStatusCount('pending')}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 ">
+        <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-500">Under Review</p>
           <p className="text-2xl font-bold">{getStatusCount('reviewing')}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 ">
+        <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-500">Resolved</p>
           <p className="text-2xl font-bold">{getStatusCount('resolved')}</p>
         </div>
-        <div className="bg-white rounded-lg shadow p-4 ">
+        <div className="bg-white rounded-lg shadow p-4">
           <p className="text-sm text-gray-500">Rejected</p>
           <p className="text-2xl font-bold">{getStatusCount('rejected')}</p>
         </div>
       </div>
 
+      {/* Filters - Original design kept */}
       <div className="flex gap-4 mb-6 bg-white p-4 rounded-lg shadow">
         <div>
           <label className="text-sm text-gray-600">Status Filter</label>
@@ -190,7 +217,7 @@ export default function AdminDisputesPage() {
                   )}
                   <p className="text-sm text-gray-700 mt-2 bg-gray-50 p-2 rounded">{dispute.description}</p>
                   
-                  {/* Show attachments */}
+                  {/* Attachments */}
                   {dispute.attachments && dispute.attachments.length > 0 && (
                     <div className="mt-2">
                       <p className="text-xs text-gray-500 mb-1">Attachments:</p>
@@ -203,7 +230,7 @@ export default function AdminDisputesPage() {
                             rel="noopener noreferrer"
                             className="text-xs text-blue-600 hover:underline flex items-center gap-1"
                           >
-                            📎 Attachment {idx + 1}
+                            Attachment {idx + 1}
                           </a>
                         ))}
                       </div>

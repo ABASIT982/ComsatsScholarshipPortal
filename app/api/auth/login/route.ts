@@ -15,7 +15,7 @@ export async function POST(request: Request) {
 
     console.log('🔍 Login attempt for regno:', regno)
 
-    // -----------------------------This is for Get student with password hash----------------------------------
+    // Get student with password hash
     const { data: student, error: studentError } = await supabase
       .from('students')
       .select('*')
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
 
     console.log('📦 Student found:', student.full_name)
 
-    //------------------------------This is for  Check if password_hash exists-----------------------------------
+    // Check if password_hash exists
     if (!student.password_hash) {
       console.log('❌ No password hash found for student')
       return NextResponse.json(
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // -------------------------------This is for Check password-------------------------------------
+    // Check password
     const isPasswordValid = await bcrypt.compare(password, student.password_hash)
     
     console.log('🔐 Password valid:', isPasswordValid)
@@ -50,6 +50,15 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Invalid registration number or password' },
         { status: 401 }
+      )
+    }
+
+    // ✅ ADD THIS - Check if account is deactivated
+    if (student.is_active === false) {
+      console.log('❌ Account deactivated for:', regno)
+      return NextResponse.json(
+        { error: 'Your account has been deactivated. Please contact the scholarship office.' },
+        { status: 403 }
       )
     }
 
