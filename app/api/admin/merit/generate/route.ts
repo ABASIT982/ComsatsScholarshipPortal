@@ -6,6 +6,13 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+// Generate verification code for selected students
+function generateVerificationCode(studentRegno: string, rank: number) {
+  const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+  const shortRegno = studentRegno.slice(-6);
+  const timestamp = Date.now().toString(36).slice(-4);
+  return `${shortRegno}-${random}-${timestamp}`;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -86,7 +93,7 @@ export async function POST(request: NextRequest) {
         .eq('scholarship_id', scholarshipId)
         .order('min_score', { ascending: false });
       scholarshipTiers = tierData || [];
-      
+
       if (scholarshipTiers.length === 0) {
         return NextResponse.json(
           { error: 'No tiers defined for this tiered scholarship' },
@@ -107,7 +114,7 @@ export async function POST(request: NextRequest) {
       for (const criterion of criteria) {
         let fieldValue = 0;
         const rawValue = applicationData[criterion.fieldName];
-        
+
         if (rawValue) {
           if (typeof rawValue === 'number') {
             fieldValue = rawValue;
@@ -121,14 +128,14 @@ export async function POST(request: NextRequest) {
         let percentageValue = 0;
         const fieldNameLower = criterion.fieldName?.toLowerCase() || '';
         const fieldLabelLower = criterion.fieldLabel?.toLowerCase() || '';
-        const isGPA = fieldNameLower.includes('gpa') || 
-                      fieldNameLower.includes('cgpa') ||
-                      fieldLabelLower.includes('gpa') ||
-                      fieldLabelLower.includes('cgpa') ||
-                      (fieldValue <= 4.33 && fieldValue > 0);
-        
+        const isGPA = fieldNameLower.includes('gpa') ||
+          fieldNameLower.includes('cgpa') ||
+          fieldLabelLower.includes('gpa') ||
+          fieldLabelLower.includes('cgpa') ||
+          (fieldValue <= 4.33 && fieldValue > 0);
+
         const isPercentage = fieldValue <= 100 && fieldValue > 0 && !isGPA;
-        
+
         if (isGPA) {
           percentageValue = (fieldValue / 4.0) * 100;
         } else if (isPercentage) {
@@ -136,10 +143,10 @@ export async function POST(request: NextRequest) {
         } else {
           percentageValue = fieldValue;
         }
-        
+
         const weightedScore = (percentageValue * criterion.weight) / 100;
         totalPercentageScore += weightedScore;
-        
+
         breakdown[criterion.fieldName] = fieldValue;
       }
 
@@ -154,7 +161,7 @@ export async function POST(request: NextRequest) {
 
     // Find max raw score and normalize to 0-100
     const maxRawScore = Math.max(...scoredApplications.map(app => app.raw_score));
-    
+
     const normalizedApplications = scoredApplications.map(app => {
       let finalScore = 0;
       if (maxRawScore > 0) {
@@ -175,10 +182,10 @@ export async function POST(request: NextRequest) {
       let status = 'waitlist';
       let awardTier = null;
       let awardDescription = null;
-      
+
       if (scholarship.scholarship_mode === 'tiered') {
         // Find matching tier based on score
-        const matchedTier = scholarshipTiers.find(tier => 
+        const matchedTier = scholarshipTiers.find(tier =>
           app.total_score >= tier.min_score && app.total_score <= tier.max_score
         );
         if (matchedTier) {
@@ -194,7 +201,13 @@ export async function POST(request: NextRequest) {
           status = 'selected';
         }
       }
-      
+
+      // Generate verification code ONLY for selected students
+      let verificationCode = null;
+      if (status === 'selected') {
+        verificationCode = generateVerificationCode(app.student_regno, index + 1);
+      }
+
       return {
         scholarship_id: scholarshipId,
         student_regno: app.student_regno,
@@ -204,6 +217,7 @@ export async function POST(request: NextRequest) {
         status: status,
         award_tier: awardTier,
         award_description: awardDescription,
+        verification_code: verificationCode,  
         score_breakdown: app.breakdown,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -251,7 +265,7 @@ export async function POST(request: NextRequest) {
     // Send notifications
     try {
       const scholarshipTitle = scholarship.title;
-      
+
       const { data: meritStudents, error: meritError } = await supabase
         .from('merit_lists')
         .select('student_regno, status, rank, total_score, award_tier, award_description')
@@ -263,7 +277,7 @@ export async function POST(request: NextRequest) {
           user_type: 'student',
           type: 'merit_generated',
           title: student.status === 'selected' ? 'Congratulations! You are Selected' : '📋 Merit List Published',
-          message: student.status === 'selected' 
+          message: student.status === 'selected'
             ? `You have been selected for "${scholarshipTitle}"! ${student.award_tier ? `Awarded: ${student.award_tier} - ${student.award_description}` : `Score: ${student.total_score}/100`}`
             : `Merit list for "${scholarshipTitle}" has been published.`,
           data: {
@@ -288,17 +302,17 @@ export async function POST(request: NextRequest) {
     // Send emails to selected students
     try {
       const selectedStudents = meritEntries.filter(entry => entry.status === 'selected');
-      
+
       for (const student of selectedStudents) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('email, full_name')
           .eq('regno', student.student_regno)
           .single();
-        
+
         const studentEmail = profile?.email;
         const studentName = profile?.full_name || student.student_regno;
-        
+
         if (studentEmail) {
           await sendSelectionEmailJS({
             to_email: studentEmail,
@@ -311,7 +325,7 @@ export async function POST(request: NextRequest) {
           console.log(`✅ Email sent to ${studentEmail}`);
         }
       }
-      
+
       console.log(`📧 Completed sending ${selectedStudents.length} emails`);
     } catch (emailError) {
       console.error('❌ Email error:', emailError);

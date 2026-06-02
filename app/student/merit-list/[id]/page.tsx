@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import jsPDF from 'jspdf';
+import QRCode from 'qrcode';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -29,6 +30,7 @@ interface MeritEntry {
   award_tier?: string;
   award_description?: string;
   student_name?: string;
+  verification_code?: string;
 }
 
 interface Scholarship {
@@ -460,6 +462,22 @@ export default function StudentMeritDetailPage() {
   const selectedCount = meritList.filter(m => m.status === 'selected' || m.status === 'awarded').length;
   const cutoffScore = selectedCount > 0 ? meritList[selectedCount - 1]?.total_score : 0;
 
+  const generateQRCodeBase64 = async (text: string): Promise<string> => {
+    try {
+      return await QRCode.toDataURL(text, {
+        width: 100,
+        margin: 1,
+        color: {
+          dark: '#1a5276',
+          light: '#ffffff'
+        }
+      });
+    } catch (err) {
+      console.error('QR Code generation failed:', err);
+      return '';
+    }
+  };
+
   const generateAwardLetterPDF = async () => {
     if (!studentEntry || !scholarship) return;
 
@@ -478,8 +496,128 @@ export default function StudentMeritDetailPage() {
       img.crossOrigin = "Anonymous";
       img.src = logoUrl;
 
-      img.onload = () => {
-        doc.addImage(img, 'JPEG', 15, 10, 25, 25);
+img.onload = async () => {
+  doc.addImage(img, 'JPEG', 15, 10, 25, 25);
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('COMSATS UNIVERSITY ISLAMABAD', 105, 22, { align: 'center' });
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.text('ABBOTTABAD CAMPUS', 105, 30, { align: 'center' });
+  doc.setDrawColor(26, 82, 118);
+  doc.setLineWidth(0.5);
+  doc.line(15, 38, 195, 38);
+  doc.setFontSize(20);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(26, 82, 118);
+  doc.text('SCHOLARSHIP AWARD LETTER', 105, 55, { align: 'center' });
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 100);
+  doc.text(`Date: ${currentDate}`, 105, 68, { align: 'center' });
+  doc.setFontSize(12);
+  doc.setTextColor(0, 0, 0);
+  doc.text('This is to certify that', 105, 88, { align: 'center' });
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(26, 82, 118);
+  doc.text(studentEntry.student_name || studentEntry.student_regno, 105, 105, { align: 'center' });
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+  doc.text(`Registration Number: ${studentEntry.student_regno}`, 105, 118, { align: 'center' });
+  doc.setFontSize(12);
+  doc.text('has been awarded the', 105, 135, { align: 'center' });
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(26, 82, 118);
+  doc.text(scholarship.title, 105, 150, { align: 'center' });
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(0, 0, 0);
+
+  let awardText = '';
+  if (isTiered && studentEntry.award_tier) {
+    awardText = `${studentEntry.award_tier} - ${studentEntry.award_description}`;
+  } else {
+    awardText = `Score: ${studentEntry.total_score}%`;
+  }
+  doc.text(awardText, 105, 167, { align: 'center' });
+  doc.setFontSize(10);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Valid for the academic year 2026', 105, 185, { align: 'center' });
+
+  // ✅ Add Verification Code with QR Code - TIGHT SPACING
+  if (studentEntry.verification_code) {
+    const verifyUrl = `${window.location.origin}/verify/${studentEntry.verification_code}`;
+    const qrCodeBase64 = await generateQRCodeBase64(verifyUrl);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Verification Code:', 105, 200, { align: 'center' });
+
+    doc.setFontSize(10);
+    doc.setFont('courier', 'bold');
+    doc.setTextColor(26, 82, 118);
+    doc.text(studentEntry.verification_code, 105, 210, { align: 'center' });
+
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(150, 150, 150);
+    doc.text('Scan QR code to verify', 105, 220, { align: 'center' });
+
+    // QR Code - centered
+    if (qrCodeBase64) {
+      doc.addImage(qrCodeBase64, 'PNG', 90, 225, 35, 35);
+    }
+
+    // Signature lines - moved up
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.3);
+    doc.line(40, 275, 90, 275);
+    doc.line(120, 275, 170, 275);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Registrar', 65, 285, { align: 'center' });
+    doc.text('Director', 145, 285, { align: 'center' });
+
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('COMSATS University Islamabad', 65, 293, { align: 'center' });
+    doc.text('Abbottabad Campus', 145, 293, { align: 'center' });
+
+    doc.setFontSize(8);
+doc.setTextColor(150, 150, 150);
+doc.text('* This is a system generated document. No signature is required. *', 105, 305, { align: 'center' });
+  } else {
+    doc.line(40, 225, 90, 225);
+    doc.line(120, 225, 170, 225);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Registrar', 65, 235, { align: 'center' });
+    doc.text('Director', 145, 235, { align: 'center' });
+
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('COMSATS University Islamabad', 65, 243, { align: 'center' });
+    doc.text('Abbottabad Campus', 145, 243, { align: 'center' });
+
+doc.setFontSize(8);
+doc.setTextColor(150, 150, 150);
+doc.text('* This is a system generated document. No signature is required. *', 105, 255, { align: 'center' });
+  }
+  
+  doc.save(`Award_Letter_${studentEntry.student_regno}.pdf`);
+  setGeneratingPDF(false);
+  setShowAwardModal(false);
+};
+
+      img.onerror = async () => {
         doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
         doc.text('COMSATS UNIVERSITY ISLAMABAD', 105, 22, { align: 'center' });
@@ -528,77 +666,39 @@ export default function StudentMeritDetailPage() {
         doc.setFontSize(10);
         doc.setTextColor(100, 100, 100);
         doc.text('Valid for the academic year 2026', 105, 195, { align: 'center' });
-        doc.setDrawColor(0, 0, 0);
-        doc.setLineWidth(0.3);
-        doc.line(40, 225, 90, 225);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(0, 0, 0);
-        doc.text('Registrar', 65, 235, { align: 'center' });
-        doc.line(120, 225, 170, 225);
-        doc.text('Director', 145, 235, { align: 'center' });
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.text('COMSATS University Islamabad', 65, 242, { align: 'center' });
-        doc.text('Abbottabad Campus', 145, 242, { align: 'center' });
-        doc.setFontSize(8);
-        doc.setTextColor(150, 150, 150);
-        doc.text('* This is a system generated document. No signature is required. *', 105, 260, { align: 'center' });
-        doc.save(`Award_Letter_${studentEntry.student_regno}.pdf`);
-        setGeneratingPDF(false);
-        setShowAwardModal(false);
-      };
 
-      img.onerror = () => {
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
-        doc.text('COMSATS UNIVERSITY ISLAMABAD', 105, 22, { align: 'center' });
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'normal');
-        doc.text('ABBOTTABAD CAMPUS', 105, 30, { align: 'center' });
-        doc.setDrawColor(26, 82, 118);
-        doc.setLineWidth(0.5);
-        doc.line(15, 38, 195, 38);
-        doc.setFontSize(20);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(26, 82, 118);
-        doc.text('SCHOLARSHIP AWARD LETTER', 105, 55, { align: 'center' });
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(100, 100, 100);
-        doc.text(`Date: ${currentDate}`, 105, 68, { align: 'center' });
-        doc.setFontSize(12);
-        doc.setTextColor(0, 0, 0);
-        doc.text('This is to certify that', 105, 90, { align: 'center' });
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(26, 82, 118);
-        doc.text(studentEntry.student_name || studentEntry.student_regno, 105, 108, { align: 'center' });
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(0, 0, 0);
-        doc.text(`Registration Number: ${studentEntry.student_regno}`, 105, 122, { align: 'center' });
-        doc.setFontSize(12);
-        doc.text('has been awarded the', 105, 140, { align: 'center' });
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor(26, 82, 118);
-        doc.text(scholarship.title, 105, 155, { align: 'center' });
-        doc.setFontSize(12);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(0, 0, 0);
+        // ✅ Add Verification Code with QR Code
+        if (studentEntry.verification_code) {
+          // Generate QR Code
+          const verifyUrl = `${window.location.origin}/verify/${studentEntry.verification_code}`;
+          const qrCodeBase64 = await generateQRCodeBase64(verifyUrl);
 
-        let awardText = '';
-        if (isTiered && studentEntry.award_tier) {
-          awardText = `${studentEntry.award_tier} - ${studentEntry.award_description}`;
+          if (qrCodeBase64) {
+            // Add QR Code on right side
+            doc.addImage(qrCodeBase64, 'PNG', 152, 195, 35, 35);
+          }
+
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          doc.setTextColor(100, 100, 100);
+          doc.text('Verification Code:', 105, 210, { align: 'center' });
+
+          doc.setFontSize(11);
+          doc.setFont('courier', 'bold');
+          doc.setTextColor(26, 82, 118);
+          doc.text(studentEntry.verification_code, 105, 220, { align: 'center' });
+
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(150, 150, 150);
+          doc.text('Scan QR code to verify', 105, 228, { align: 'center' });
+
+          doc.line(40, 245, 90, 245);
+          doc.line(120, 245, 170, 245);
         } else {
-          awardText = `Score: ${studentEntry.total_score}%`;
+          doc.line(40, 225, 90, 225);
+          doc.line(120, 225, 170, 225);
         }
-        doc.text(awardText, 105, 172, { align: 'center' });
-        doc.setFontSize(10);
-        doc.setTextColor(100, 100, 100);
-        doc.text('Valid for the academic year 2026', 105, 195, { align: 'center' });
-        doc.line(40, 225, 90, 225);
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(0, 0, 0);
@@ -828,114 +928,114 @@ export default function StudentMeritDetailPage() {
           </div>
         </div>
         {/* Award Letter Modal */}
-{showAwardModal && studentEntry && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-    <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-auto">
-      {/* Modal Header */}
-      <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
-        <h2 className="text-xl font-bold text-gray-900">Award Letter</h2>
-        <button
-          onClick={() => setShowAwardModal(false)}
-          className="text-gray-400 hover:text-gray-600"
-        >
-          ✕
-        </button>
-      </div>
+        {showAwardModal && studentEntry && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-auto">
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                <h2 className="text-xl font-bold text-gray-900">Award Letter</h2>
+                <button
+                  onClick={() => setShowAwardModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
 
-      {/* Award Letter Content */}
-      <div className="p-8">
-        <div className="text-center mb-6">
-          <img 
-            src="/images/comsats.jpg" 
-            alt="COMSATS Logo" 
-            className="w-20 h-20 mx-auto mb-3"
-            onError={(e) => (e.currentTarget.style.display = 'none')}
-          />
-          <h2 className="text-xl font-bold text-blue-900">COMSATS UNIVERSITY ISLAMABAD</h2>
-          <p className="text-sm text-gray-600">ABBOTTABAD CAMPUS</p>
-          <div className="border-b-2 border-blue-900 mt-4 mb-6"></div>
-          <h3 className="text-lg font-bold uppercase text-blue-800">Scholarship Award Letter</h3>
-        </div>
+              {/* Award Letter Content */}
+              <div className="p-8">
+                <div className="text-center mb-6">
+                  <img
+                    src="/images/comsats.jpg"
+                    alt="COMSATS Logo"
+                    className="w-20 h-20 mx-auto mb-3"
+                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                  />
+                  <h2 className="text-xl font-bold text-blue-900">COMSATS UNIVERSITY ISLAMABAD</h2>
+                  <p className="text-sm text-gray-600">ABBOTTABAD CAMPUS</p>
+                  <div className="border-b-2 border-blue-900 mt-4 mb-6"></div>
+                  <h3 className="text-lg font-bold uppercase text-blue-800">Scholarship Award Letter</h3>
+                </div>
 
-        <div className="space-y-4">
-          <p className="text-center text-gray-600">Date: {new Date().toLocaleDateString()}</p>
-          
-          <p className="text-center">This is to certify that</p>
-          
-          <p className="text-center text-xl font-bold text-blue-800">
-            {studentEntry.student_name || studentEntry.student_regno}
-          </p>
-          
-          <p className="text-center">Registration Number: <strong>{studentEntry.student_regno}</strong></p>
-          
-          <p className="text-center">has been awarded the</p>
-          
-          <p className="text-center text-lg font-bold text-blue-800">
-            {scholarship?.title}
-          </p>
-          
-          <div className="text-center bg-green-50 p-4 rounded-lg">
-            <p className="font-semibold">
-              {isTiered && studentEntry.award_tier ? (
-                <>
-                  {studentEntry.award_tier}<br />
-                  <span className="text-green-700">{studentEntry.award_description}</span>
-                </>
-              ) : (
-                `Score: ${studentEntry.total_score}%`
-              )}
-            </p>
+                <div className="space-y-4">
+                  <p className="text-center text-gray-600">Date: {new Date().toLocaleDateString()}</p>
+
+                  <p className="text-center">This is to certify that</p>
+
+                  <p className="text-center text-xl font-bold text-blue-800">
+                    {studentEntry.student_name || studentEntry.student_regno}
+                  </p>
+
+                  <p className="text-center">Registration Number: <strong>{studentEntry.student_regno}</strong></p>
+
+                  <p className="text-center">has been awarded the</p>
+
+                  <p className="text-center text-lg font-bold text-blue-800">
+                    {scholarship?.title}
+                  </p>
+
+                  <div className="text-center bg-green-50 p-4 rounded-lg">
+                    <p className="font-semibold">
+                      {isTiered && studentEntry.award_tier ? (
+                        <>
+                          {studentEntry.award_tier}<br />
+                          <span className="text-green-700">{studentEntry.award_description}</span>
+                        </>
+                      ) : (
+                        `Score: ${studentEntry.total_score}%`
+                      )}
+                    </p>
+                  </div>
+
+                  <p className="text-center text-sm text-gray-500">Valid for the academic year 2026</p>
+                </div>
+
+                <div className="flex justify-between mt-12 pt-8">
+                  <div className="text-center">
+                    <div className="border-t border-black w-32 pt-2"></div>
+                    <p className="text-sm">Registrar</p>
+                    <p className="text-xs text-gray-500">COMSATS University Islamabad</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="border-t border-black w-32 pt-2"></div>
+                    <p className="text-sm">Director</p>
+                    <p className="text-xs text-gray-500">Abbottabad Campus</p>
+                  </div>
+                </div>
+
+                <p className="text-center text-xs text-gray-400 mt-8">
+                  * This is a system generated document. No signature is required. *
+                </p>
+              </div>
+
+              {/* Modal Footer Buttons */}
+              <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-end gap-3">
+                <button
+                  onClick={() => setShowAwardModal(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={generateAwardLetterPDF}
+                  disabled={generatingPDF}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
+                  {generatingPDF ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      Download PDF
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
-          
-          <p className="text-center text-sm text-gray-500">Valid for the academic year 2026</p>
-        </div>
-
-        <div className="flex justify-between mt-12 pt-8">
-          <div className="text-center">
-            <div className="border-t border-black w-32 pt-2"></div>
-            <p className="text-sm">Registrar</p>
-            <p className="text-xs text-gray-500">COMSATS University Islamabad</p>
-          </div>
-          <div className="text-center">
-            <div className="border-t border-black w-32 pt-2"></div>
-            <p className="text-sm">Director</p>
-            <p className="text-xs text-gray-500">Abbottabad Campus</p>
-          </div>
-        </div>
-
-        <p className="text-center text-xs text-gray-400 mt-8">
-          * This is a system generated document. No signature is required. *
-        </p>
-      </div>
-
-      {/* Modal Footer Buttons */}
-      <div className="sticky bottom-0 bg-gray-50 border-t px-6 py-4 flex justify-end gap-3">
-        <button
-          onClick={() => setShowAwardModal(false)}
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100"
-        >
-          Close
-        </button>
-        <button
-          onClick={generateAwardLetterPDF}
-          disabled={generatingPDF}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
-        >
-          {generatingPDF ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              Download PDF
-            </>
-          )}
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+        )}
       </div>
     </div>
   );
