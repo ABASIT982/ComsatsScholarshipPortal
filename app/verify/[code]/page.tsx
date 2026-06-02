@@ -64,11 +64,11 @@ export default function VerifyPage({ params }: { params: Promise<{ code: string 
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
+    <div className="min-h-screen bg-gray-100 p-22">
       <div className="max-w-2xl mx-auto">
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-8 text-center">
+          <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-5 text-center">
             <CheckCircle className="w-16 h-16 text-white mx-auto mb-3" />
             <h1 className="text-2xl font-bold text-white">Verified Scholarship</h1>
             <p className="text-green-100 mt-2">Official scholarship from COMSATS University</p>

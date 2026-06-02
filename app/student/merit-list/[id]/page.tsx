@@ -987,8 +987,23 @@ doc.text('* This is a system generated document. No signature is required. *', 1
                     </p>
                   </div>
 
-                  <p className="text-center text-sm text-gray-500">Valid for the academic year 2026</p>
+                  <p className="text-center text-sm text-gray-500">Valid for this academic year</p>
                 </div>
+                {/* Verification Code Section - Added to modal */}
+{studentEntry.verification_code && (
+  <div className="text-center mt-4 p-3 bg-blue-50 rounded-lg">
+    <p className="text-xs font-semibold text-gray-600">Verification Code</p>
+    <p className="text-sm font-mono font-bold text-blue-700 break-all">
+      {studentEntry.verification_code}
+    </p>
+    <p className="text-xs text-gray-500 mt-1">
+      Scan QR code from downloaded PDF or visit:
+    </p>
+    <p className="text-xs text-blue-500 break-all">
+      {typeof window !== 'undefined' ? `${window.location.origin}/verify/${studentEntry.verification_code}` : ''}
+    </p>
+  </div>
+)}
 
                 <div className="flex justify-between mt-12 pt-8">
                   <div className="text-center">
