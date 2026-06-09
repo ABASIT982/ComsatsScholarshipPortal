@@ -35,7 +35,6 @@ export default function ApplyScholarshipPage() {
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [documents, setDocuments] = useState<Record<string, File[]>>({});
 
-  // Debug logs
   console.log('🔍 URL Scholarship ID:', scholarshipId);
   console.log('👤 Current User:', user);
 
@@ -50,7 +49,6 @@ export default function ApplyScholarshipPage() {
           console.log('✅ Scholarship FOUND:', data.scholarship);
           setScholarship(data.scholarship);
           
-          // AUTO-SET STUDENT TYPE IF ONLY ONE OPTION
           if (data.scholarship.student_types && data.scholarship.student_types.length === 1) {
             console.log('🎯 Auto-setting student type:', data.scholarship.student_types[0]);
             setStudentType(data.scholarship.student_types[0]);
@@ -66,13 +64,11 @@ export default function ApplyScholarshipPage() {
       });
   }, [scholarshipId]);
 
-  // Initialize form with AUTO-FILL for name, regno, email
   const initializeForm = (scholarshipData: Scholarship) => {
     const fields = getAllFormFields(scholarshipData, '');
     const initialData: Record<string, any> = {};
 
     fields.forEach(field => {
-      // AUTO-FILL NAME, REGNO, EMAIL FIELDS FROM USER ACCOUNT
       if (field.name === 'full_name' || field.name === 'name' || field.name === 'student_name') {
         initialData[field.name] = user?.name || '';
       } else if (field.name === 'email' || field.name === 'student_email') {
@@ -89,22 +85,18 @@ export default function ApplyScholarshipPage() {
     setFormErrors({});
   };
 
-  // Get all form fields based on scholarship configuration
   const getAllFormFields = (scholarshipData: Scholarship, selectedStudentType: string) => {
     let fields: any[] = [];
 
-    // Add template fields
     if (scholarshipData.form_template !== 'custom') {
       const template = FORM_TEMPLATES[scholarshipData.form_template as keyof typeof FORM_TEMPLATES];
       if (template) {
         fields = [...template.fields];
       }
     } else {
-      // Add custom fields
       fields = [...scholarshipData.custom_fields];
     }
 
-    // Add student type specific fields
     if (selectedStudentType && STUDENT_TYPE_FIELDS[selectedStudentType as keyof typeof STUDENT_TYPE_FIELDS]) {
       const studentFields = STUDENT_TYPE_FIELDS[selectedStudentType as keyof typeof STUDENT_TYPE_FIELDS];
       fields = [...fields, ...studentFields];
@@ -142,9 +134,8 @@ export default function ApplyScholarshipPage() {
     }
   };
 
-  // Enhanced field validation that handles auto-filled fields
+  // ✅ FIXED: Enhanced field validation with max_value
   const validateField = (field: any, value: any, files: File[] = []) => {
-    // Check if this is an auto-filled field that should be skipped from validation
     const nameFields = ['full_name', 'name', 'student_name'];
     const emailFields = ['email', 'student_email'];
     const regnoFields = ['regno', 'student_regno', 'roll_number'];
@@ -154,12 +145,10 @@ export default function ApplyScholarshipPage() {
       (emailFields.includes(field.name) && (localStorage.getItem('studentEmail') || user?.email)) ||
       (regnoFields.includes(field.name) && user?.regno);
 
-    // If it's an auto-filled field, skip required validation (it will be auto-filled)
     if (isAutoFilledField && field.required && !value && files.length === 0) {
-      return ''; // No error for auto-filled fields
+      return '';
     }
 
-    // Normal validation for non-auto-filled fields
     if (field.required && !value && files.length === 0) {
       return `${field.label} is required`;
     }
@@ -168,32 +157,55 @@ export default function ApplyScholarshipPage() {
       return 'Please enter a valid email address';
     }
 
+    // ✅ FIXED: Number validation with max_value
     if (field.type === 'number' && value) {
       const numValue = parseFloat(value);
-      if (field.validation?.min !== undefined && numValue < field.validation.min) {
-        return `${field.label} must be at least ${field.validation.min}`;
+      
+      if (numValue < 0) {
+        return `${field.label} cannot be negative`;
       }
-      if (field.validation?.max !== undefined && numValue > field.validation.max) {
-        return `${field.label} must be at most ${field.validation.max}`;
+      
+      const maxValue = field.max_value || field.validation?.max;
+      if (maxValue && numValue > maxValue) {
+        return `${field.label} cannot exceed ${maxValue}`;
       }
     }
 
     return '';
   };
 
-  // Handle dynamic form field changes with validation
+  // ✅ FIXED: Handle field change with max_value enforcement
   const handleFieldChange = (fieldName: string, value: any) => {
+    let processedValue = value;
+    
+    if (scholarship && studentType) {
+      const fields = getAllFormFields(scholarship, studentType);
+      const field = fields.find(f => f.name === fieldName);
+      
+      if (field?.type === 'number' && value !== '') {
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          const maxValue = field.max_value || field.validation?.max;
+          if (maxValue && numValue > maxValue) {
+            processedValue = maxValue;
+          }
+          if (numValue < 0) {
+            processedValue = 0;
+          }
+        }
+      }
+    }
+    
     setFormData(prev => ({
       ...prev,
-      [fieldName]: value
+      [fieldName]: processedValue
     }));
 
-    // Validate field on change
     if (scholarship && studentType) {
       const fields = getAllFormFields(scholarship, studentType);
       const field = fields.find(f => f.name === fieldName);
       if (field) {
-        const error = validateField(field, value, documents[fieldName] || []);
+        const error = validateField(field, processedValue, documents[fieldName] || []);
         setFormErrors(prev => ({
           ...prev,
           [fieldName]: error
@@ -202,53 +214,47 @@ export default function ApplyScholarshipPage() {
     }
   };
 
-  // Handle file uploads with validation
-// UPDATED: Handle file uploads with actual file storage
-// FIXED: Handle file uploads with proper state management
-const handleFileUpload = async (fieldName: string, files: File[]) => {
-  if (!files.length) return;
+  const handleFileUpload = async (fieldName: string, files: File[]) => {
+    if (!files.length) return;
 
-  try {
-    const uploadFormData = new FormData();
-    files.forEach(file => uploadFormData.append('files', file));
-    uploadFormData.append('scholarshipId', scholarshipId);
-    uploadFormData.append('studentRegno', user?.regno || '');
-    uploadFormData.append('fieldName', fieldName);
+    try {
+      const uploadFormData = new FormData();
+      files.forEach(file => uploadFormData.append('files', file));
+      uploadFormData.append('scholarshipId', scholarshipId);
+      uploadFormData.append('studentRegno', user?.regno || '');
+      uploadFormData.append('fieldName', fieldName);
 
-    console.log('📤 Uploading files for field:', fieldName, files);
+      console.log('📤 Uploading files for field:', fieldName, files);
 
-    const response = await fetch('/api/upload/scholarship', {
-      method: 'POST',
-      body: uploadFormData,
-    });
+      const response = await fetch('/api/upload/scholarship', {
+        method: 'POST',
+        body: uploadFormData,
+      });
 
-    const result = await response.json();
+      const result = await response.json();
 
-    if (response.ok) {
-      // Store the uploaded file URLs in documents state
-      setDocuments(prev => ({
-        ...prev,
-        [fieldName]: result.files // This should be the array of file objects with URLs
-      }));
-      
-      console.log('✅ Files uploaded and stored in state:', result.files);
-      
-      // Update form data to mark files as uploaded
-      setFormData(prev => ({
-        ...prev,
-        [fieldName]: `Uploaded ${result.files.length} file(s)`
-      }));
-    } else {
-      console.error('❌ Upload failed:', result.error);
-      alert(`Failed to upload files: ${result.error}`);
+      if (response.ok) {
+        setDocuments(prev => ({
+          ...prev,
+          [fieldName]: result.files
+        }));
+        
+        console.log('✅ Files uploaded and stored in state:', result.files);
+        
+        setFormData(prev => ({
+          ...prev,
+          [fieldName]: `Uploaded ${result.files.length} file(s)`
+        }));
+      } else {
+        console.error('❌ Upload failed:', result.error);
+        alert(`Failed to upload files: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('❌ Upload error:', error);
+      alert('Error uploading files. Please try again.');
     }
-  } catch (error) {
-    console.error('❌ Upload error:', error);
-    alert('Error uploading files. Please try again.');
-  }
-};
+  };
 
-  // Remove file from specific field
   const removeFile = (fieldName: string, index: number) => {
     const updatedFiles = documents[fieldName]?.filter((_, i) => i !== index) || [];
     setDocuments(prev => ({
@@ -256,7 +262,6 @@ const handleFileUpload = async (fieldName: string, files: File[]) => {
       [fieldName]: updatedFiles
     }));
 
-    // Re-validate after removal
     if (scholarship && studentType) {
       const fields = getAllFormFields(scholarship, studentType);
       const field = fields.find(f => f.name === fieldName);
@@ -270,7 +275,6 @@ const handleFileUpload = async (fieldName: string, files: File[]) => {
     }
   };
 
-  // Comprehensive form validation that handles auto-filled fields
   const validateForm = () => {
     if (!scholarship || !studentType) return false;
 
@@ -282,7 +286,6 @@ const handleFileUpload = async (fieldName: string, files: File[]) => {
       const value = formData[field.name];
       const fieldFiles = documents[field.name] || [];
       
-      // Check if this is an auto-filled field
       const nameFields = ['full_name', 'name', 'student_name'];
       const emailFields = ['email', 'student_email'];
       const regnoFields = ['regno', 'student_regno', 'roll_number'];
@@ -292,10 +295,8 @@ const handleFileUpload = async (fieldName: string, files: File[]) => {
         (emailFields.includes(field.name) && (localStorage.getItem('studentEmail') || user?.email)) ||
         (regnoFields.includes(field.name) && user?.regno);
 
-      // Skip validation for auto-filled fields (they will be filled automatically)
       if (isAutoFilledField) {
-        console.log(`✅ Skipping validation for auto-filled field: ${field.name}`);
-        return; // Skip this field
+        return;
       }
 
       const error = validateField(field, value, fieldFiles);
@@ -303,19 +304,14 @@ const handleFileUpload = async (fieldName: string, files: File[]) => {
       if (error) {
         errors[field.name] = error;
         isValid = false;
-        console.log(`❌ Validation error for ${field.name}: ${error}`);
       }
     });
 
     setFormErrors(errors);
     
-    // Debug log to see what's happening
-    console.log('🔍 Form validation result:', { isValid, errors, formData });
-    
     return isValid;
   };
 
-  // Render dynamic form fields
   const renderFormFields = () => {
     if (!scholarship || !studentType) return null;
 
@@ -329,7 +325,6 @@ const handleFileUpload = async (fieldName: string, files: File[]) => {
 
         {renderFieldInput(field)}
 
-        {/* Field-specific error message */}
         {formErrors[field.name] && (
           <p className="text-red-500 text-sm mt-1">{formErrors[field.name]}</p>
         )}
@@ -341,7 +336,7 @@ const handleFileUpload = async (fieldName: string, files: File[]) => {
     ));
   };
 
-  // Render individual field input with auto-fill for name, regno, email
+  // ✅ FIXED: Number input with max_value enforcement
   const renderFieldInput = (field: any) => {
     const commonProps = {
       className: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black",
@@ -350,7 +345,6 @@ const handleFileUpload = async (fieldName: string, files: File[]) => {
       onChange: (e: any) => handleFieldChange(field.name, e.target.value)
     };
 
-    // AUTO-FILLED FIELDS - make them readonly
     const nameFields = ['full_name', 'name', 'student_name'];
     const emailFields = ['email', 'student_email'];
     const regnoFields = ['regno', 'student_regno', 'roll_number'];
@@ -384,14 +378,20 @@ const handleFileUpload = async (fieldName: string, files: File[]) => {
         );
 
       case 'number':
+        const maxValue = field.max_value || field.validation?.max;
         return (
           <input
             type="number"
             {...commonProps}
             placeholder={field.placeholder}
-            min={field.validation?.min}
-            max={field.validation?.max}
+            min={0}
+            max={maxValue}
             step="0.01"
+            onKeyDown={(e) => {
+              if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+                e.preventDefault();
+              }
+            }}
           />
         );
 
@@ -430,7 +430,6 @@ const handleFileUpload = async (fieldName: string, files: File[]) => {
               </label>
             </div>
 
-            {/* Show selected files */}
             {documents[field.name]?.length > 0 && (
               <div className="mt-3">
                 <p className="text-sm font-medium text-gray-700 mb-2">Selected Files:</p>
@@ -458,81 +457,69 @@ const handleFileUpload = async (fieldName: string, files: File[]) => {
     }
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setSubmitting(true);
-  setError('');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError('');
 
-  try {
-    if (!user || user.type !== 'student') {
-      throw new Error('Please login as a student to apply for scholarships');
-    }
-
-    // Comprehensive form validation
-    if (!validateForm()) {
-      throw new Error('Please fix the errors in the form before submitting');
-    }
-
-    const studentRegno = user.regno;
-
-    // DEBUG: Check what's in documents state
-    console.log('🔍 Documents state before submission:', documents);
-
-    // PREPARE APPLICATION DATA - USE THE ALREADY UPLOADED FILES FROM documents STATE
-    const applicationData = {
-      student_regno: studentRegno,
-      application_data: {
-        // AUTO-FILLED STUDENT INFORMATION
-        student_name: user.name,
-        student_email: localStorage.getItem('studentEmail') || user?.email,
-        
-        // USER-ENTERED FORM DATA
-        ...formData,
-        
-        // USE THE ALREADY UPLOADED DOCUMENTS FROM handleFileUpload
-        // These should already contain the file URLs from the upload response
-        documents: documents,
-        
-        // METADATA
-        student_type: studentType,
-        submitted_at: new Date().toISOString(),
-        scholarship_template: scholarship?.form_template
+    try {
+      if (!user || user.type !== 'student') {
+        throw new Error('Please login as a student to apply for scholarships');
       }
-    };
 
-    console.log('🔄 Sending application with documents:', applicationData);
+      if (!validateForm()) {
+        throw new Error('Please fix the errors in the form before submitting');
+      }
 
-    const response = await fetch(`/api/scholarships/${scholarshipId}/apply`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(applicationData),
-    });
+      const studentRegno = user.regno;
 
-    const data = await response.json();
+      console.log('🔍 Documents state before submission:', documents);
 
-    if (!response.ok) {
-      throw new Error(data.error || `Failed to submit application (Status: ${response.status})`);
+      const applicationData = {
+        student_regno: studentRegno,
+        application_data: {
+          student_name: user.name,
+          student_email: localStorage.getItem('studentEmail') || user?.email,
+          ...formData,
+          documents: documents,
+          student_type: studentType,
+          submitted_at: new Date().toISOString(),
+          scholarship_template: scholarship?.form_template
+        }
+      };
+
+      console.log('🔄 Sending application with documents:', applicationData);
+
+      const response = await fetch(`/api/scholarships/${scholarshipId}/apply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(applicationData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || `Failed to submit application (Status: ${response.status})`);
+      }
+
+      const appliedKey = `appliedScholarships_${studentRegno}`;
+      const appliedScholarships = JSON.parse(localStorage.getItem(appliedKey) || '[]');
+      localStorage.setItem(appliedKey, JSON.stringify([...appliedScholarships, scholarshipId]));
+
+      setSuccess(true);
+      setTimeout(() => {
+        router.push('/student/scholarships');
+      }, 2000);
+
+    } catch (err: any) {
+      console.error('❌ Submission error:', err);
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
     }
-
-    // Store applications per student
-    const appliedKey = `appliedScholarships_${studentRegno}`;
-    const appliedScholarships = JSON.parse(localStorage.getItem(appliedKey) || '[]');
-    localStorage.setItem(appliedKey, JSON.stringify([...appliedScholarships, scholarshipId]));
-
-    setSuccess(true);
-    setTimeout(() => {
-      router.push('/student/scholarships');
-    }, 2000);
-
-  } catch (err: any) {
-    console.error('❌ Submission error:', err);
-    setError(err.message);
-  } finally {
-    setSubmitting(false);
-  }
-};
+  };
 
   if (!scholarship && !error) {
     return (
@@ -569,7 +556,6 @@ const handleSubmit = async (e: React.FormEvent) => {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-2xl mx-auto">
-        {/* Back Button */}
         <Link
           href="/student/scholarships"
           className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
@@ -578,14 +564,12 @@ const handleSubmit = async (e: React.FormEvent) => {
           Back to Scholarship
         </Link>
 
-        {/* Application Form */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Apply for Scholarship</h1>
           <p className="text-gray-600 mb-6">
             Complete your application for: <strong>{scholarship?.title}</strong>
           </p>
 
-          {/* Error Message */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
               {error}
@@ -593,7 +577,6 @@ const handleSubmit = async (e: React.FormEvent) => {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Student Info (Read-only) */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
               <h3 className="font-semibold text-blue-900 mb-2">Student Information</h3>
               <div className="grid grid-cols-2 gap-4 text-sm">
@@ -612,7 +595,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
             </div>
 
-            {/* Student Type Selection */}
             {scholarship?.student_types?.includes('undergraduate') &&
               scholarship?.student_types?.includes('graduate') && !studentType && (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
@@ -638,7 +620,6 @@ const handleSubmit = async (e: React.FormEvent) => {
                 </div>
               )}
 
-            {/* Show dynamic form when student type is selected */}
             {(studentType || (scholarship?.student_types?.length === 1)) && (
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Application Form</h3>
@@ -646,7 +627,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
             )}
 
-            {/* Submit Button */}
             <div className="flex gap-4 pt-6 border-t border-gray-200">
               <Link
                 href={`/student/scholarships/${scholarshipId}`}

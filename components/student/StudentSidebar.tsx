@@ -19,12 +19,14 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import Image from 'next/image'
+import { Calculator } from 'lucide-react'
 
 const menuItems = [
   { name: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
   { name: 'My Profile', href: '/student/profile', icon: User },
   { name: 'Scholarships', href: '/student/scholarships', icon: Award },
   { name: 'Applications', href: '/student/applications', icon: FileText },
+  { name: 'Check Eligibility', href: '/student/eligibility', icon: Calculator },
   { name: 'Merit List', href: '/student/merit-list', icon: BarChart3 },
   { name: 'Notifications', href: '/student/notifications', icon: Bell },
   { name: 'Disputes', href: '/student/disputes', icon: AlertCircle },      // ← ONLY ADDED THIS
@@ -61,12 +63,12 @@ export function StudentSidebar() {
         "fixed inset-y-0 left-0 z-40 w-64 bg-gradient-to-b from-blue-900 to-blue-800 text-white flex flex-col transform transition-transform duration-300 ease-in-out h-screen",
         isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
-        
+
         {/* Logo Section - Added padding to avoid menu button */}
         <div className="flex items-center gap-3 px-6 py-6 border-b border-blue-700 shrink-0 mt-16 lg:mt-0">
           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center p-1">
-            <Image 
-              src="/images/comsats.jpg" 
+            <Image
+              src="/images/comsats.jpg"
               alt="COMSATS Logo"
               width={32}
               height={32}
@@ -84,7 +86,7 @@ export function StudentSidebar() {
           {menuItems.map((item) => {
             const Icon = item.icon
             const isActive = pathname === item.href
-            
+
             return (
               <Link
                 key={item.name}
@@ -113,7 +115,7 @@ export function StudentSidebar() {
         {/* Footer Actions - Fixed at bottom */}
         <div className="p-4 border-t border-blue-700 space-y-2 shrink-0">
           {/* Logout */}
-          <button 
+          <button
             onClick={handleSignOut}
             className="flex items-center gap-3 w-full px-4 py-3 text-sm font-medium text-red-100 hover:bg-red-500/20 hover:text-white rounded-xl transition-all duration-200 group hover:scale-[1.02]"
           >
@@ -125,7 +127,7 @@ export function StudentSidebar() {
 
       {/* Mobile Overlay */}
       {isMobileOpen && (
-        <div 
+        <div
           className="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-30"
           onClick={() => setIsMobileOpen(false)}
         />
