@@ -14,6 +14,7 @@ import {
   Bell,
   LogOut,
   BarChart3,
+  Sparkles,
   Globe,
   AlertCircle        // ← ONLY ADDED THIS
 } from 'lucide-react'
@@ -25,6 +26,7 @@ const menuItems = [
   { name: 'Dashboard', href: '/student/dashboard', icon: LayoutDashboard },
   { name: 'My Profile', href: '/student/profile', icon: User },
   { name: 'Scholarships', href: '/student/scholarships', icon: Award },
+  { name: 'Recommended', href: '/student/recommended', icon: Sparkles },
   { name: 'Applications', href: '/student/applications', icon: FileText },
   { name: 'Check Eligibility', href: '/student/eligibility', icon: Calculator },
   { name: 'Merit List', href: '/student/merit-list', icon: BarChart3 },
