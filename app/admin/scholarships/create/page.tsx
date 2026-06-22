@@ -1,9 +1,8 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Plus, Trash2, Layers } from 'lucide-react';
+import { ArrowLeft, Save, Plus, Trash2, Layers, GripVertical } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
-import { TEMPLATE_OPTIONS } from '@/lib/form-templates';
 
 type CustomField = {
   type: string;
@@ -12,6 +11,12 @@ type CustomField = {
   required: boolean;
   placeholder: string;
   max_value: number | null;
+};
+
+type FormSection = {
+  id: string;
+  title: string;
+  fields: CustomField[];
 };
 
 type Tier = {
@@ -34,163 +39,129 @@ export default function CreateScholarshipPage() {
     deadline: '',
     status: 'active',
     student_types: ['undergraduate'],
-    form_template: 'custom',
-    custom_fields: [] as CustomField[],
     number_of_awards: 0
   });
 
-  const [customFields, setCustomFields] = useState<CustomField[]>([
-    { type: 'number', label: 'FSC Marks', name: 'fsc_marks', required: true, placeholder: 'Enter FSC marks', max_value: 1100 },
-    { type: 'number', label: 'Matric Marks', name: 'matric_marks', required: true, placeholder: 'Enter Matric marks', max_value: 1100 },
-    { type: 'number', label: 'NTS Score', name: 'nts_score', required: true, placeholder: 'Enter NTS score', max_value: 100 },
+  const [sections, setSections] = useState<FormSection[]>([
+    {
+      id: 'section_1',
+      title: 'Personal Information',
+      fields: [
+        { type: 'text', label: 'Full Name', name: 'full_name', required: true, placeholder: 'Enter full name', max_value: null },
+        { type: 'text', label: 'CNIC/B-Form', name: 'cnic', required: true, placeholder: '12345-6789012-3', max_value: null },
+        { type: 'email', label: 'Email', name: 'email', required: true, placeholder: 'student@example.com', max_value: null },
+        { type: 'text', label: 'Phone Number', name: 'phone', required: true, placeholder: '03XX-XXXXXXX', max_value: null },
+      ]
+    },
+    {
+      id: 'section_2',
+      title: 'Academic Information',
+      fields: [
+        { type: 'text', label: 'Registration Number', name: 'registration_no', required: true, placeholder: 'FA21-BCS-001', max_value: null },
+        { type: 'number', label: 'CGPA', name: 'cgpa', required: true, placeholder: '3.5', max_value: 4.0 },
+        { type: 'number', label: 'FSC Marks', name: 'fsc_marks', required: true, placeholder: 'Enter FSC marks', max_value: 1100 },
+        { type: 'number', label: 'Matric Marks', name: 'matric_marks', required: true, placeholder: 'Enter Matric marks', max_value: 1100 },
+        { type: 'number', label: 'NTS Score', name: 'nts_score', required: true, placeholder: 'Enter NTS score', max_value: 100 },
+      ]
+    },
+    {
+      id: 'section_3',
+      title: 'Documents',
+      fields: [
+        { type: 'file', label: 'Transcript', name: 'transcript', required: true, placeholder: 'Upload PDF', max_value: null },
+        { type: 'file', label: 'CNIC Copy', name: 'cnic_copy', required: true, placeholder: 'Upload image', max_value: null },
+        { type: 'file', label: 'Passport Photo', name: 'photo', required: true, placeholder: 'Upload image', max_value: null },
+      ]
+    }
   ]);
 
-  // Scholarship Mode (Admin chooses)
   const [scholarshipMode, setScholarshipMode] = useState<'single' | 'tiered'>('single');
-
-  // Tiers - Start empty, admin adds what they want
   const [tiers, setTiers] = useState<Tier[]>([]);
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError('');
-
-  if (!formData.title.trim() || !formData.description.trim() || !formData.deadline) {
-    toast.error('Please fill all required fields', {
-      duration: 3000,
-      position: 'top-center',
-      style: { background: '#fee2e2', color: '#991b1b', borderRadius: '8px', padding: '10px 16px' },
-    });
-    setLoading(false);
-    return;
-  }
-
-  if (scholarshipMode === 'single' && (!formData.number_of_awards || formData.number_of_awards <= 0)) {
-    toast.error('Number of awards required for single mode', {
-      duration: 3000,
-      position: 'top-center',
-      style: { background: '#fee2e2', color: '#991b1b', borderRadius: '8px', padding: '10px 16px' },
-    });
-    setLoading(false);
-    return;
-  }
-
-  if (scholarshipMode === 'tiered' && tiers.length === 0) {
-    toast.error('Please add at least one tier', {
-      duration: 3000,
-      position: 'top-center',
-      style: { background: '#fee2e2', color: '#991b1b', borderRadius: '8px', padding: '10px 16px' },
-    });
-    setLoading(false);
-    return;
-  }
-
-  const deadlineDate = new Date(formData.deadline);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  if (deadlineDate < today) {
-    toast.error('Deadline cannot be in the past', {
-      duration: 3000,
-      position: 'top-center',
-      style: { background: '#fee2e2', color: '#991b1b', borderRadius: '8px', padding: '10px 16px' },
-    });
-    setLoading(false);
-    return;
-  }
-
-  const currentTiers = [...tiers];
-  
-  const submissionData = {
-    title: formData.title,
-    description: formData.description,
-    deadline: formData.deadline,
-    status: formData.status,
-    student_types: formData.student_types,
-    form_template: formData.form_template,
-    custom_fields: customFields,
-    number_of_awards: scholarshipMode === 'single' ? formData.number_of_awards : 0,
-    scholarship_mode: scholarshipMode,
-    tiers: scholarshipMode === 'tiered' ? currentTiers : []
+  const addSection = (): void => {
+    setSections(prev => [...prev, {
+      id: `section_${Date.now()}`,
+      title: `Section ${prev.length + 1}`,
+      fields: []
+    }]);
+    toast.success('New section added!');
   };
 
-  try {
-    const response = await fetch('/api/scholarships', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(submissionData),
-    });
+  const updateSectionTitle = (index: number, title: string): void => {
+    const updated = [...sections];
+    updated[index].title = title;
+    setSections(updated);
+  };
 
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || 'Failed to create scholarship');
+  const removeSection = (index: number): void => {
+    if (sections.length <= 1) {
+      toast.error('At least one section is required');
+      return;
     }
-
-    toast.success(`${formData.title} created`, {
-      duration: 3000,
-      position: 'top-center',
-      style: { background: '#dcfce7', color: '#166534', borderRadius: '8px', padding: '10px 16px' },
-    });
-
-    setTimeout(() => {
-      router.push('/admin/scholarships');
-    }, 1500);
-    
-  } catch (err: any) {
-    toast.error(`Failed: ${err.message}`, {
-      duration: 3000,
-      position: 'top-center',
-      style: { background: '#fee2e2', color: '#991b1b', borderRadius: '8px', padding: '10px 16px' },
-    });
-    setError(err.message);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setSections(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleStudentTypeChange = (studentType: string, checked: boolean) => {
-    setFormData(prev => {
-      const types = checked
-        ? [...prev.student_types, studentType]
-        : prev.student_types.filter(t => t !== studentType);
-      if (types.length === 0) return prev;
-      return { ...prev, student_types: types };
-    });
+  const moveSectionUp = (index: number): void => {
+    if (index === 0) return;
+    const updated = [...sections];
+    [updated[index], updated[index - 1]] = [updated[index - 1], updated[index]];
+    setSections(updated);
   };
 
-  const addCustomField = () => {
-    setCustomFields(prev => [...prev, {
-      type: 'number',
+  const moveSectionDown = (index: number): void => {
+    if (index === sections.length - 1) return;
+    const updated = [...sections];
+    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+    setSections(updated);
+  };
+
+  const addFieldToSection = (sectionIndex: number): void => {
+    const updated = [...sections];
+    updated[sectionIndex].fields.push({
+      type: 'text',
       label: '',
       name: '',
       required: false,
       placeholder: '',
       max_value: null
-    }]);
+    });
+    setSections(updated);
   };
 
-  const updateCustomField = (index: number, field: keyof CustomField, value: any) => {
-    const updated = [...customFields];
-    updated[index] = { ...updated[index], [field]: value };
+  const updateFieldInSection = (
+    sectionIndex: number,
+    fieldIndex: number,
+    field: keyof CustomField,
+    value: string | number | boolean | null
+  ): void => {
+    const updated = [...sections];
+    const fieldData = updated[sectionIndex].fields[fieldIndex];
+
     if (field === 'label') {
-      updated[index].name = value.toLowerCase().replace(/\s+/g, '_');
+      fieldData.label = value as string;
+      fieldData.name = (value as string).toLowerCase().replace(/\s+/g, '_');
+    } else if (field === 'type') {
+      fieldData.type = value as string;
+    } else if (field === 'name') {
+      fieldData.name = value as string;
+    } else if (field === 'placeholder') {
+      fieldData.placeholder = value as string;
+    } else if (field === 'required') {
+      fieldData.required = value as boolean;
+    } else if (field === 'max_value') {
+      fieldData.max_value = value as number | null;
     }
-    setCustomFields(updated);
+
+    setSections(updated);
   };
 
-  const removeCustomField = (index: number) => {
-    setCustomFields(prev => prev.filter((_, i) => i !== index));
+  const removeFieldFromSection = (sectionIndex: number, fieldIndex: number): void => {
+    const updated = [...sections];
+    updated[sectionIndex].fields = updated[sectionIndex].fields.filter((_, i) => i !== fieldIndex);
+    setSections(updated);
   };
 
-  // Tier functions - Admin has full control
-  const addTier = () => {
+  const addTier = (): void => {
     setTiers(prev => [...prev, {
       id: Date.now().toString(),
       tier_name: '',
@@ -201,33 +172,118 @@ const handleSubmit = async (e: React.FormEvent) => {
     }]);
   };
 
-  const updateTier = (index: number, field: keyof Tier, value: any) => {
+  const updateTier = (index: number, field: keyof Tier, value: string | number): void => {
     const updated = [...tiers];
     updated[index] = { ...updated[index], [field]: value };
     setTiers(updated);
   };
 
-  const removeTier = (index: number) => {
+  const removeTier = (index: number): void => {
     setTiers(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    if (!formData.title.trim() || !formData.description.trim() || !formData.deadline) {
+      toast.error('Please fill all required fields');
+      setLoading(false);
+      return;
+    }
+
+    if (scholarshipMode === 'single' && (!formData.number_of_awards || formData.number_of_awards <= 0)) {
+      toast.error('Number of awards required for single mode');
+      setLoading(false);
+      return;
+    }
+
+    if (scholarshipMode === 'tiered' && tiers.length === 0) {
+      toast.error('Please add at least one tier');
+      setLoading(false);
+      return;
+    }
+
+    const deadlineDate = new Date(formData.deadline);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    if (deadlineDate < today) {
+      toast.error('Deadline cannot be in the past');
+      setLoading(false);
+      return;
+    }
+
+    const hasEmptySection = sections.some(s => s.fields.length === 0);
+    if (hasEmptySection) {
+      toast.error('All sections must have at least one field');
+      setLoading(false);
+      return;
+    }
+
+    const hasEmptyLabel = sections.some(s => s.fields.some(f => !f.label.trim()));
+    if (hasEmptyLabel) {
+      toast.error('All fields must have a label');
+      setLoading(false);
+      return;
+    }
+
+    const submissionData = {
+      title: formData.title,
+      description: formData.description,
+      deadline: formData.deadline,
+      status: formData.status,
+      student_types: formData.student_types,
+      form_sections: sections,
+      number_of_awards: scholarshipMode === 'single' ? formData.number_of_awards : 0,
+      scholarship_mode: scholarshipMode,
+      tiers: scholarshipMode === 'tiered' ? tiers : []
+    };
+
+    try {
+      const response = await fetch('/api/scholarships', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submissionData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to create scholarship');
+      }
+
+      toast.success(`${formData.title} created successfully!`);
+      setTimeout(() => router.push('/admin/scholarships'), 1500);
+    } catch (err: any) {
+      setError(err.message);
+      toast.error(`Failed: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleStudentTypeChange = (studentType: string, checked: boolean): void => {
+    setFormData(prev => {
+      const types = checked
+        ? [...prev.student_types, studentType]
+        : prev.student_types.filter(t => t !== studentType);
+      if (types.length === 0) return prev;
+      return { ...prev, student_types: types };
+    });
   };
 
   const today = new Date().toISOString().split('T')[0];
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Toast Container */}
-        <Toaster
-          position="top-center"
-          toastOptions={{
-            duration: 3000,
-            style: {
-              borderRadius: '8px',
-              padding: '10px 16px',
-              fontSize: '14px',
-            },
-          }}
-        />
+      <div className="max-w-6xl mx-auto">
+        <Toaster position="top-center" />
 
         <div className="flex items-center gap-4 mb-8">
           <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
@@ -276,7 +332,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               />
             </div>
 
-            {/* Student Type Selection */}
+            {/* Student Types */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Student Types *</label>
               <div className="flex gap-6">
@@ -301,7 +357,7 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
             </div>
 
-            {/* Scholarship Mode Selection - Admin Chooses */}
+            {/* Scholarship Mode */}
             <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
               <label className="block text-sm font-medium text-gray-700 mb-3">Scholarship Award Type</label>
               <div className="flex gap-6">
@@ -332,7 +388,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
             </div>
 
-            {/* Single Mode: Number of Awards */}
             {scholarshipMode === 'single' && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Number of Awards *</label>
@@ -350,7 +405,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
             )}
 
-            {/* Tiered Mode: Admin Creates Tiers */}
             {scholarshipMode === 'tiered' && (
               <div className="border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-4">
@@ -384,7 +438,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                               type="text"
                               value={tier.tier_name}
                               onChange={(e) => updateTier(index, 'tier_name', e.target.value)}
-                              placeholder="e.g., CAT-A, Gold, President's"
+                              placeholder="e.g., Gold"
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                             />
                           </div>
@@ -447,79 +501,176 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
             )}
 
-            {/* Form Template Selection */}
-            <div>
-              <label htmlFor="form_template" className="block text-sm font-medium text-gray-700 mb-2">Application Form Type *</label>
-              <select
-                id="form_template"
-                name="form_template"
-                value={formData.form_template}
-                onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-              >
-                {TEMPLATE_OPTIONS.map(template => (
-                  <option key={template.value} value={template.value}>{template.label}</option>
-                ))}
-              </select>
-            </div>
+            {/* Form Sections (Tabs) */}
+            <div className="border-t pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                  <GripVertical size={20} />
+                  Form Sections (Tabs)
+                </h3>
+                <button
+                  type="button"
+                  onClick={addSection}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                >
+                  <Plus size={18} />
+                  Add Section
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mb-4">
+                Each section becomes a tab in the student application form.
+              </p>
 
-            {/* Custom Fields Builder */}
-            {formData.form_template === 'custom' && (
-              <div className="border-t pt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-medium text-gray-900">Custom Form Fields</h3>
-                  <button type="button" onClick={addCustomField} className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">+ Add Field</button>
-                </div>
+              {sections.map((section, sectionIndex) => (
+                <div key={section.id} className="border border-gray-200 rounded-lg p-4 mb-4 bg-gray-50">
+                  <div className="flex items-center gap-3 mb-3">
+                    <input
+                      type="text"
+                      value={section.title}
+                      onChange={(e) => updateSectionTitle(sectionIndex, e.target.value)}
+                      placeholder="Section Title (e.g., Personal Information)"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => moveSectionUp(sectionIndex)}
+                        className="text-gray-500 hover:text-gray-700 p-1"
+                        title="Move Up"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveSectionDown(sectionIndex)}
+                        className="text-gray-500 hover:text-gray-700 p-1"
+                        title="Move Down"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeSection(sectionIndex)}
+                        className="text-red-600 hover:text-red-800 p-1"
+                        title="Remove Section"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
 
-                {customFields.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">No custom fields added yet. Click "Add Field" to start building your form.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {customFields.map((field, index) => (
-                      <div key={index} className="flex flex-wrap gap-4 p-4 border border-gray-200 rounded-lg">
-                        <select value={field.type} onChange={(e) => updateCustomField(index, 'type', e.target.value)} className="px-3 py-2 border rounded">
+                  <div className="space-y-2 ml-4">
+                    {section.fields.map((field, fieldIndex) => (
+                      <div key={fieldIndex} className="flex flex-wrap gap-2 p-2 bg-white rounded border border-gray-200 items-center">
+                        <select
+                          value={field.type}
+                          onChange={(e) => updateFieldInSection(sectionIndex, fieldIndex, 'type', e.target.value)}
+                          className="px-2 py-1 border rounded text-sm"
+                        >
                           <option value="text">Text</option>
                           <option value="number">Number</option>
                           <option value="email">Email</option>
                           <option value="textarea">Text Area</option>
-                          <option value="file">File Upload</option>
+                          <option value="file">File</option>
                         </select>
-                        <input type="text" placeholder="Field Label" value={field.label} onChange={(e) => updateCustomField(index, 'label', e.target.value)} className="flex-1 px-3 py-2 border rounded" />
-                        <input type="text" placeholder="Placeholder" value={field.placeholder} onChange={(e) => updateCustomField(index, 'placeholder', e.target.value)} className="flex-1 px-3 py-2 border rounded" />
+                        <input
+                          type="text"
+                          value={field.label}
+                          onChange={(e) => updateFieldInSection(sectionIndex, fieldIndex, 'label', e.target.value)}
+                          placeholder="Field Label"
+                          className="flex-1 px-2 py-1 border rounded text-sm min-w-[120px]"
+                        />
+                        <input
+                          type="text"
+                          value={field.placeholder || ''}
+                          onChange={(e) => updateFieldInSection(sectionIndex, fieldIndex, 'placeholder', e.target.value)}
+                          placeholder="Placeholder"
+                          className="flex-1 px-2 py-1 border rounded text-sm min-w-[100px]"
+                        />
                         {field.type === 'number' && (
-                          <input type="number" placeholder="Max Value" value={field.max_value || ''} onChange={(e) => updateCustomField(index, 'max_value', parseFloat(e.target.value))} className="w-32 px-3 py-2 border rounded" />
+                          <input
+                            type="number"
+                            value={field.max_value ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              updateFieldInSection(sectionIndex, fieldIndex, 'max_value', val ? parseFloat(val) : null);
+                            }}
+                            placeholder="Max"
+                            className="w-16 px-2 py-1 border rounded text-sm"
+                          />
                         )}
-                        <label className="flex items-center gap-2">
-                          <input type="checkbox" checked={field.required} onChange={(e) => updateCustomField(index, 'required', e.target.checked)} />
-                          <span>Required</span>
+                        <label className="flex items-center gap-1 text-sm whitespace-nowrap">
+                          <input
+                            type="checkbox"
+                            checked={field.required}
+                            onChange={(e) => updateFieldInSection(sectionIndex, fieldIndex, 'required', e.target.checked)}
+                            className="w-4 h-4"
+                          />
+                          Required
                         </label>
-                        <button type="button" onClick={() => removeCustomField(index)} className="bg-red-600 text-white px-3 py-2 rounded">Remove</button>
+                        <button
+                          type="button"
+                          onClick={() => removeFieldFromSection(sectionIndex, fieldIndex)}
+                          className="text-red-500 hover:text-red-700 px-1"
+                        >
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     ))}
+                    <button
+                      type="button"
+                      onClick={() => addFieldToSection(sectionIndex)}
+                      className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 mt-1"
+                    >
+                      <Plus size={14} />
+                      Add Field to {section.title}
+                    </button>
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              ))}
+            </div>
 
             {/* Deadline & Status */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Application Deadline *</label>
-                <input type="date" name="deadline" value={formData.deadline} onChange={handleChange} min={today} className="w-full px-4 py-3 border rounded-lg" required />
+                <input
+                  type="date"
+                  name="deadline"
+                  value={formData.deadline}
+                  onChange={handleChange}
+                  min={today}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                  required
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-                <select name="status" value={formData.status} onChange={handleChange} className="w-full px-4 py-3 border rounded-lg">
+                <select
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                >
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
                 </select>
               </div>
             </div>
 
-            {/* Submit Button */}
             <div className="flex gap-4 pt-6 border-t">
-              <button type="button" onClick={() => router.back()} className="flex-1 border border-gray-300 text-gray-700 px-6 py-3 rounded-lg">Cancel</button>
-              <button type="submit" disabled={loading} className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => router.back()}
+                className="flex-1 border border-gray-300 text-gray-700 px-6 py-3 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg flex items-center justify-center gap-2"
+              >
                 <Save size={20} />
                 {loading ? 'Creating...' : 'Create Scholarship'}
               </button>

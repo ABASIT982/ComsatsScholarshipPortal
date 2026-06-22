@@ -2,9 +2,35 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Upload, CheckCircle } from 'lucide-react';
+import { 
+  ArrowLeft, 
+  Upload, 
+  CheckCircle, 
+  ChevronLeft, 
+  ChevronRight, 
+  User, 
+  Upload as UploadIcon, 
+  Edit2,
+  Award,
+  Clock
+} from 'lucide-react';
 import { useAuth } from '@/app/contexts/AuthContext';
-import { FORM_TEMPLATES, STUDENT_TYPE_FIELDS } from '@/lib/form-templates';
+
+type CustomField = {
+  type: string;
+  label: string;
+  name: string;
+  required: boolean;
+  placeholder: string;
+  max_value: number | null;
+};
+
+type FormSection = {
+  id: string;
+  title: string;
+  icon: string;
+  fields: CustomField[];
+};
 
 interface Scholarship {
   id: string;
@@ -13,8 +39,7 @@ interface Scholarship {
   deadline: string;
   status: 'active' | 'inactive';
   student_types: string[];
-  form_template: string;
-  custom_fields: any[];
+  form_sections: FormSection[];
 }
 
 export default function ApplyScholarshipPage() {
@@ -24,207 +49,182 @@ export default function ApplyScholarshipPage() {
   const { user } = useAuth();
 
   const [scholarship, setScholarship] = useState<Scholarship | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [studentType, setStudentType] = useState('');
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-
-  // Dynamic form state
+  const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState<Record<string, any>>({});
   const [documents, setDocuments] = useState<Record<string, File[]>>({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [completedSections, setCompletedSections] = useState<Set<string>>(new Set());
+  const [touchedFields, setTouchedFields] = useState<Set<string>>(new Set());
 
-  console.log('🔍 URL Scholarship ID:', scholarshipId);
-  console.log('👤 Current User:', user);
+  const studentName = user?.name || '';
+  const studentRegno = user?.regno || '';
+  const studentEmail = localStorage.getItem('studentEmail') || user?.email || '';
+
+  const defaultSections: FormSection[] = [
+    {
+      id: 'personal',
+      title: 'Personal Information',
+      icon: '👤',
+      fields: [
+        { type: 'text', label: 'Full Name', name: 'full_name', required: true, placeholder: 'Enter your full name', max_value: null },
+        { type: 'text', label: 'Registration Number', name: 'registration_no', required: true, placeholder: 'Enter registration number', max_value: null },
+        { type: 'email', label: 'Email', name: 'email', required: true, placeholder: 'Enter your email', max_value: null },
+        { type: 'text', label: 'CNIC/B-Form', name: 'cnic', required: true, placeholder: 'Enter CNIC number', max_value: null },
+        { type: 'text', label: 'Phone Number', name: 'phone', required: true, placeholder: 'Enter phone number', max_value: null },
+      ]
+    },
+    {
+      id: 'academic',
+      title: 'Academic Information',
+      icon: '📚',
+      fields: [
+        { type: 'text', label: 'Department', name: 'department', required: true, placeholder: 'Enter your department', max_value: null },
+        { type: 'number', label: 'Current Semester', name: 'semester', required: true, placeholder: 'e.g., 1', max_value: null },
+        { type: 'number', label: 'Current CGPA', name: 'cgpa', required: true, placeholder: 'e.g., 3.5', max_value: null },
+        { type: 'number', label: 'FSC Marks', name: 'fsc_marks', required: true, placeholder: 'Enter FSC marks', max_value: null },
+        { type: 'number', label: 'Matric Marks', name: 'matric_marks', required: true, placeholder: 'Enter Matric marks', max_value: null },
+        { type: 'number', label: 'NTS Score', name: 'nts_score', required: true, placeholder: 'Enter NTS score', max_value: null },
+      ]
+    },
+    {
+      id: 'documents',
+      title: 'Documents Upload',
+      icon: '📄',
+      fields: [
+        { type: 'file', label: 'Transcript', name: 'transcript', required: true, placeholder: 'Upload PDF', max_value: null },
+        { type: 'file', label: 'CNIC Copy', name: 'cnic_copy', required: true, placeholder: 'Upload image', max_value: null },
+        { type: 'file', label: 'Passport Photo', name: 'photo', required: true, placeholder: 'Upload image', max_value: null },
+      ]
+    }
+  ];
+
+  const reviewSection: FormSection = {
+    id: 'review',
+    title: 'Review & Submit',
+    icon: '📋',
+    fields: []
+  };
 
   useEffect(() => {
-    console.log('🔄 Checking scholarship with ID:', scholarshipId);
-    
-    fetch(`/api/scholarships/${scholarshipId}`)
-      .then(r => r.json())
-      .then(data => {
-        console.log('🎯 Scholarship API Response:', data);
-        if (data.scholarship) {
-          console.log('✅ Scholarship FOUND:', data.scholarship);
-          setScholarship(data.scholarship);
-          
-          if (data.scholarship.student_types && data.scholarship.student_types.length === 1) {
-            console.log('🎯 Auto-setting student type:', data.scholarship.student_types[0]);
-            setStudentType(data.scholarship.student_types[0]);
-          }
-        } else {
-          console.log('❌ Scholarship NOT FOUND in API');
-          setError('Scholarship not found');
-        }
-      })
-      .catch(err => {
-        console.error('🚨 API Error:', err);
-        setError('Failed to load scholarship');
-      });
+    fetchScholarship();
   }, [scholarshipId]);
 
-  const initializeForm = (scholarshipData: Scholarship) => {
-    const fields = getAllFormFields(scholarshipData, '');
-    const initialData: Record<string, any> = {};
-
-    fields.forEach(field => {
-      if (field.name === 'full_name' || field.name === 'name' || field.name === 'student_name') {
-        initialData[field.name] = user?.name || '';
-      } else if (field.name === 'email' || field.name === 'student_email') {
-        initialData[field.name] = localStorage.getItem('studentEmail') || user?.email || '';
-      } else if (field.name === 'regno' || field.name === 'student_regno' || field.name === 'roll_number') {
-        initialData[field.name] = user?.regno || '';
-      } else {
-        initialData[field.name] = '';
-      }
-    });
-
-    setFormData(initialData);
-    setDocuments({});
-    setFormErrors({});
-  };
-
-  const getAllFormFields = (scholarshipData: Scholarship, selectedStudentType: string) => {
-    let fields: any[] = [];
-
-    if (scholarshipData.form_template !== 'custom') {
-      const template = FORM_TEMPLATES[scholarshipData.form_template as keyof typeof FORM_TEMPLATES];
-      if (template) {
-        fields = [...template.fields];
-      }
-    } else {
-      fields = [...scholarshipData.custom_fields];
+  useEffect(() => {
+    if (scholarship) {
+      const autoFillData: Record<string, any> = {};
+      if (studentName) autoFillData.full_name = studentName;
+      if (studentRegno) autoFillData.registration_no = studentRegno;
+      if (studentEmail) autoFillData.email = studentEmail;
+      setFormData(prev => ({ ...prev, ...autoFillData }));
     }
-
-    if (selectedStudentType && STUDENT_TYPE_FIELDS[selectedStudentType as keyof typeof STUDENT_TYPE_FIELDS]) {
-      const studentFields = STUDENT_TYPE_FIELDS[selectedStudentType as keyof typeof STUDENT_TYPE_FIELDS];
-      fields = [...fields, ...studentFields];
-    }
-
-    return fields;
-  };
+  }, [scholarship, studentName, studentRegno, studentEmail]);
 
   const fetchScholarship = async () => {
     try {
-      console.log('🔄 Fetching scholarship with ID:', scholarshipId);
-
-      const response = await fetch(`/api/scholarships/${scholarshipId}`);
+      const response = await fetch(`/api/scholarships?id=${scholarshipId}`);
       const data = await response.json();
-
-      console.log('📦 Scholarship API Response:', {
-        status: response.status,
-        data: data,
-        scholarship: data.scholarship
-      });
-
-      if (!response.ok) {
+      if (!response.ok || !data.scholarship) {
         throw new Error(data.error || 'Failed to fetch scholarship');
       }
-
-      if (!data.scholarship) {
-        throw new Error('Scholarship data is missing from response');
-      }
-
       setScholarship(data.scholarship);
-      initializeForm(data.scholarship);
     } catch (err: any) {
-      console.error('❌ Error fetching scholarship:', err);
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ✅ FIXED: Enhanced field validation with max_value
-  const validateField = (field: any, value: any, files: File[] = []) => {
-    const nameFields = ['full_name', 'name', 'student_name'];
-    const emailFields = ['email', 'student_email'];
-    const regnoFields = ['regno', 'student_regno', 'roll_number'];
+  const getAllSections = (): FormSection[] => {
+    let sections: FormSection[] = [];
     
-    const isAutoFilledField = 
-      (nameFields.includes(field.name) && user?.name) ||
-      (emailFields.includes(field.name) && (localStorage.getItem('studentEmail') || user?.email)) ||
-      (regnoFields.includes(field.name) && user?.regno);
-
-    if (isAutoFilledField && field.required && !value && files.length === 0) {
-      return '';
+    if (scholarship?.form_sections && scholarship.form_sections.length > 0) {
+      sections = [...scholarship.form_sections];
+    } else {
+      sections = [...defaultSections];
     }
+    
+    sections = sections.filter(s => s.id !== 'review');
+    return sections;
+  };
 
-    if (field.required && !value && files.length === 0) {
+  const getFullSections = (): FormSection[] => {
+    const sections = getAllSections();
+    return [...sections, reviewSection];
+  };
+
+  const getCurrentSection = (): FormSection => {
+    const sections = getFullSections();
+    return sections[currentStep] || sections[0];
+  };
+
+  const getCurrentFields = (): CustomField[] => {
+    const section = getCurrentSection();
+    return section.fields || [];
+  };
+
+  const validateField = (field: CustomField, value: any): string => {
+    if (field.required && (!value || (typeof value === 'string' && value.trim() === ''))) {
       return `${field.label} is required`;
     }
-
+    if (field.type === 'number' && value) {
+      const numValue = parseFloat(value);
+      if (isNaN(numValue)) return `${field.label} must be a valid number`;
+      if (numValue < 0) return `${field.label} cannot be negative`;
+      if (field.max_value && numValue > field.max_value) {
+        return `${field.label} cannot exceed ${field.max_value}`;
+      }
+    }
     if (field.type === 'email' && value && !/\S+@\S+\.\S+/.test(value)) {
       return 'Please enter a valid email address';
     }
-
-    // ✅ FIXED: Number validation with max_value
-    if (field.type === 'number' && value) {
-      const numValue = parseFloat(value);
-      
-      if (numValue < 0) {
-        return `${field.label} cannot be negative`;
-      }
-      
-      const maxValue = field.max_value || field.validation?.max;
-      if (maxValue && numValue > maxValue) {
-        return `${field.label} cannot exceed ${maxValue}`;
-      }
-    }
-
     return '';
   };
 
-  // ✅ FIXED: Handle field change with max_value enforcement
-  const handleFieldChange = (fieldName: string, value: any) => {
-    let processedValue = value;
-    
-    if (scholarship && studentType) {
-      const fields = getAllFormFields(scholarship, studentType);
-      const field = fields.find(f => f.name === fieldName);
-      
-      if (field?.type === 'number' && value !== '') {
-        const numValue = parseFloat(value);
-        if (!isNaN(numValue)) {
-          const maxValue = field.max_value || field.validation?.max;
-          if (maxValue && numValue > maxValue) {
-            processedValue = maxValue;
-          }
-          if (numValue < 0) {
-            processedValue = 0;
-          }
-        }
-      }
+  const isFieldValid = (field: CustomField): boolean => {
+    if (field.type === 'file') {
+      if (field.required && (!documents[field.name] || documents[field.name].length === 0)) return false;
+      return true;
     }
-    
-    setFormData(prev => ({
-      ...prev,
-      [fieldName]: processedValue
-    }));
+    const value = formData[field.name];
+    return validateField(field, value) === '';
+  };
 
-    if (scholarship && studentType) {
-      const fields = getAllFormFields(scholarship, studentType);
-      const field = fields.find(f => f.name === fieldName);
+  const isStepValid = (): boolean => {
+    const section = getCurrentSection();
+    if (section.id === 'review') return true;
+    const fields = section.fields || [];
+    return fields.every(field => isFieldValid(field));
+  };
+
+  const handleFieldChange = (fieldName: string, value: any) => {
+    setTouchedFields(prev => new Set(prev).add(fieldName));
+    setFormData(prev => ({ ...prev, [fieldName]: value }));
+    
+    const sections = getAllSections();
+    for (const section of sections) {
+      const field = section.fields.find(f => f.name === fieldName);
       if (field) {
-        const error = validateField(field, processedValue, documents[fieldName] || []);
-        setFormErrors(prev => ({
-          ...prev,
-          [fieldName]: error
-        }));
+        const error = validateField(field, value);
+        setFormErrors(prev => ({ ...prev, [fieldName]: error }));
+        if (!error && isFieldValid(field)) {
+          setCompletedSections(prev => new Set(prev).add(section.id));
+        }
       }
     }
   };
 
   const handleFileUpload = async (fieldName: string, files: File[]) => {
     if (!files.length) return;
-
     try {
       const uploadFormData = new FormData();
       files.forEach(file => uploadFormData.append('files', file));
       uploadFormData.append('scholarshipId', scholarshipId);
-      uploadFormData.append('studentRegno', user?.regno || '');
+      uploadFormData.append('studentRegno', studentRegno || '');
       uploadFormData.append('fieldName', fieldName);
-
-      console.log('📤 Uploading files for field:', fieldName, files);
 
       const response = await fetch('/api/upload/scholarship', {
         method: 'POST',
@@ -232,300 +232,215 @@ export default function ApplyScholarshipPage() {
       });
 
       const result = await response.json();
-
       if (response.ok) {
-        setDocuments(prev => ({
-          ...prev,
-          [fieldName]: result.files
-        }));
-        
-        console.log('✅ Files uploaded and stored in state:', result.files);
-        
-        setFormData(prev => ({
-          ...prev,
-          [fieldName]: `Uploaded ${result.files.length} file(s)`
-        }));
+        setDocuments(prev => ({ ...prev, [fieldName]: result.files }));
+        setFormData(prev => ({ ...prev, [fieldName]: `Uploaded ${result.files.length} file(s)` }));
+        setFormErrors(prev => { const newErrors = { ...prev }; delete newErrors[fieldName]; return newErrors; });
       } else {
-        console.error('❌ Upload failed:', result.error);
         alert(`Failed to upload files: ${result.error}`);
       }
     } catch (error) {
-      console.error('❌ Upload error:', error);
+      console.error('Upload error:', error);
       alert('Error uploading files. Please try again.');
     }
   };
 
   const removeFile = (fieldName: string, index: number) => {
     const updatedFiles = documents[fieldName]?.filter((_, i) => i !== index) || [];
-    setDocuments(prev => ({
-      ...prev,
-      [fieldName]: updatedFiles
-    }));
-
-    if (scholarship && studentType) {
-      const fields = getAllFormFields(scholarship, studentType);
-      const field = fields.find(f => f.name === fieldName);
-      if (field) {
-        const error = validateField(field, formData[fieldName], updatedFiles);
-        setFormErrors(prev => ({
-          ...prev,
-          [fieldName]: error
-        }));
-      }
+    setDocuments(prev => ({ ...prev, [fieldName]: updatedFiles }));
+    if (updatedFiles.length === 0) {
+      setFormErrors(prev => ({ ...prev, [fieldName]: `Please upload ${fieldName}` }));
     }
   };
 
-  const validateForm = () => {
-    if (!scholarship || !studentType) return false;
-
-    const fields = getAllFormFields(scholarship, studentType);
-    const errors: Record<string, string> = {};
-    let isValid = true;
-
-    fields.forEach(field => {
-      const value = formData[field.name];
-      const fieldFiles = documents[field.name] || [];
-      
-      const nameFields = ['full_name', 'name', 'student_name'];
-      const emailFields = ['email', 'student_email'];
-      const regnoFields = ['regno', 'student_regno', 'roll_number'];
-      
-      const isAutoFilledField = 
-        (nameFields.includes(field.name) && user?.name) ||
-        (emailFields.includes(field.name) && (localStorage.getItem('studentEmail') || user?.email)) ||
-        (regnoFields.includes(field.name) && user?.regno);
-
-      if (isAutoFilledField) {
-        return;
-      }
-
-      const error = validateField(field, value, fieldFiles);
-      
+  const nextStep = () => {
+    const sections = getFullSections();
+    const currentSection = getCurrentSection();
+    
+    if (currentSection.id === 'review') return;
+    
+    const fields = currentSection.fields || [];
+    let hasError = false;
+    for (const field of fields) {
+      const error = validateField(field, formData[field.name]);
       if (error) {
-        errors[field.name] = error;
-        isValid = false;
+        setFormErrors(prev => ({ ...prev, [field.name]: error }));
+        hasError = true;
       }
-    });
-
-    setFormErrors(errors);
-    
-    return isValid;
-  };
-
-  const renderFormFields = () => {
-    if (!scholarship || !studentType) return null;
-
-    const fields = getAllFormFields(scholarship, studentType);
-
-    return fields.map((field, index) => (
-      <div key={index} className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {field.label} {field.required && <span className="text-red-500">*</span>}
-        </label>
-
-        {renderFieldInput(field)}
-
-        {formErrors[field.name] && (
-          <p className="text-red-500 text-sm mt-1">{formErrors[field.name]}</p>
-        )}
-
-        {field.placeholder && !['file', 'textarea'].includes(field.type) && !formErrors[field.name] && (
-          <p className="text-sm text-gray-500 mt-1">{field.placeholder}</p>
-        )}
-      </div>
-    ));
-  };
-
-  // ✅ FIXED: Number input with max_value enforcement
-  const renderFieldInput = (field: any) => {
-    const commonProps = {
-      className: "w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black",
-      required: field.required,
-      value: formData[field.name] || '',
-      onChange: (e: any) => handleFieldChange(field.name, e.target.value)
-    };
-
-    const nameFields = ['full_name', 'name', 'student_name'];
-    const emailFields = ['email', 'student_email'];
-    const regnoFields = ['regno', 'student_regno', 'roll_number'];
-    
-    const isAutoFilledField = 
-      (nameFields.includes(field.name) && user?.name) ||
-      (emailFields.includes(field.name) && (localStorage.getItem('studentEmail') || user?.email)) ||
-      (regnoFields.includes(field.name) && user?.regno);
-    
-    if (isAutoFilledField) {
-      commonProps.className += " bg-gray-100 cursor-not-allowed";
     }
-
-    switch (field.type) {
-      case 'text':
-      case 'email':
-        return (
-          <div className="relative">
-            <input 
-              type={field.type} 
-              {...commonProps} 
-              placeholder={field.placeholder}
-              readOnly={!!isAutoFilledField}
-            />
-            {isAutoFilledField && (
-              <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">Auto-filled</span>
-              </div>
-            )}
-          </div>
-        );
-
-      case 'number':
-        const maxValue = field.max_value || field.validation?.max;
-        return (
-          <input
-            type="number"
-            {...commonProps}
-            placeholder={field.placeholder}
-            min={0}
-            max={maxValue}
-            step="0.01"
-            onKeyDown={(e) => {
-              if (e.key === '-' || e.key === 'e' || e.key === 'E') {
-                e.preventDefault();
-              }
-            }}
-          />
-        );
-
-      case 'textarea':
-        return (
-          <textarea
-            {...commonProps}
-            rows={4}
-            placeholder={field.placeholder}
-            className={`${commonProps.className} resize-vertical`}
-          />
-        );
-
-      case 'file':
-        return (
-          <div>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
-              <Upload className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-              <p className="text-gray-600 mb-2">Click to upload {field.label}</p>
-              <input
-                type="file"
-                multiple
-                onChange={(e) => {
-                  if (e.target.files) {
-                    handleFileUpload(field.name, Array.from(e.target.files));
-                  }
-                }}
-                className="hidden"
-                id={`file-${field.name}`}
-              />
-              <label
-                htmlFor={`file-${field.name}`}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer inline-block"
-              >
-                Choose Files
-              </label>
-            </div>
-
-            {documents[field.name]?.length > 0 && (
-              <div className="mt-3">
-                <p className="text-sm font-medium text-gray-700 mb-2">Selected Files:</p>
-                <div className="space-y-2">
-                  {documents[field.name].map((file, index) => (
-                    <div key={index} className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded">
-                      <span className="text-sm text-gray-700">{file.name}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(field.name, index)}
-                        className="text-red-600 hover:text-red-800 text-sm"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        );
-
-      default:
-        return <input type="text" {...commonProps} placeholder={field.placeholder} />;
+    if (hasError) return;
+    
+    setCompletedSections(prev => new Set(prev).add(currentSection.id));
+    
+    const nextIndex = currentStep + 1;
+    if (nextIndex < sections.length) {
+      setCurrentStep(nextIndex);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
+  const prevStep = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const goToStep = (index: number) => {
+    if (index <= currentStep || index === 0) {
+      setCurrentStep(index);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // 🔥 FIX: Submit ONLY when submitting button is clicked
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 🔥 ONLY proceed if on review step
+    const currentSection = getCurrentSection();
+    if (currentSection.id !== 'review') {
+      return;
+    }
+    
     setSubmitting(true);
     setError('');
 
     try {
+      const sections = getAllSections();
+      let allValid = true;
+      for (const section of sections) {
+        if (section.id === 'review') continue;
+        const fields = section.fields || [];
+        for (const field of fields) {
+          const error = validateField(field, formData[field.name]);
+          if (error) {
+            setFormErrors(prev => ({ ...prev, [field.name]: error }));
+            allValid = false;
+          }
+        }
+      }
+      if (!allValid) throw new Error('Please fix all errors before submitting');
+
       if (!user || user.type !== 'student') {
-        throw new Error('Please login as a student to apply for scholarships');
+        throw new Error('Please login as a student');
       }
-
-      if (!validateForm()) {
-        throw new Error('Please fix the errors in the form before submitting');
-      }
-
-      const studentRegno = user.regno;
-
-      console.log('🔍 Documents state before submission:', documents);
 
       const applicationData = {
         student_regno: studentRegno,
         application_data: {
-          student_name: user.name,
-          student_email: localStorage.getItem('studentEmail') || user?.email,
+          student_name: studentName,
+          student_email: studentEmail,
           ...formData,
           documents: documents,
-          student_type: studentType,
-          submitted_at: new Date().toISOString(),
-          scholarship_template: scholarship?.form_template
+          submitted_at: new Date().toISOString()
         }
       };
 
-      console.log('🔄 Sending application with documents:', applicationData);
-
       const response = await fetch(`/api/scholarships/${scholarshipId}/apply`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(applicationData),
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || `Failed to submit application (Status: ${response.status})`);
-      }
-
-      const appliedKey = `appliedScholarships_${studentRegno}`;
-      const appliedScholarships = JSON.parse(localStorage.getItem(appliedKey) || '[]');
-      localStorage.setItem(appliedKey, JSON.stringify([...appliedScholarships, scholarshipId]));
+      if (!response.ok) throw new Error(data.error || 'Failed to submit application');
 
       setSuccess(true);
-      setTimeout(() => {
-        router.push('/student/scholarships');
-      }, 2000);
-
+      setTimeout(() => router.push('/student/scholarships'), 2000);
     } catch (err: any) {
-      console.error('❌ Submission error:', err);
       setError(err.message);
     } finally {
       setSubmitting(false);
     }
   };
 
-  if (!scholarship && !error) {
+  const renderField = (field: CustomField) => {
+    const value = formData[field.name] || '';
+    const isAutoFilled = ['full_name', 'registration_no', 'email', 'cnic', 'phone'].includes(field.name);
+    const error = touchedFields.has(field.name) ? formErrors[field.name] : '';
+    const isInvalid = error && touchedFields.has(field.name);
+
+    if (field.type === 'file') {
+      return (
+        <div>
+          <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-colors ${error ? 'border-red-400 bg-red-50' : 'border-gray-300 hover:border-blue-400'}`}>
+            <UploadIcon className="w-8 h-8 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-600 mb-3">{field.placeholder || `Upload ${field.label}`}</p>
+            <input
+              type="file"
+              multiple
+              onChange={(e) => e.target.files && handleFileUpload(field.name, Array.from(e.target.files))}
+              className="hidden"
+              id={`file-${field.name}`}
+            />
+            <label
+              htmlFor={`file-${field.name}`}
+              className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg transition-colors cursor-pointer text-sm font-medium"
+            >
+              Choose Files
+            </label>
+          </div>
+          {documents[field.name]?.length > 0 && (
+            <div className="mt-3 space-y-1.5">
+              {documents[field.name].map((file, index) => (
+                <div key={index} className="flex items-center justify-between bg-gray-50 px-4 py-2.5 rounded-lg border border-gray-200">
+                  <span className="text-sm text-gray-700 truncate max-w-xs">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(field.name, index)}
+                    className="text-red-500 hover:text-red-700 text-sm font-medium"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {isInvalid && <p className="text-red-500 text-sm mt-2">{error}</p>}
+        </div>
+      );
+    }
+
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="animate-pulse">Loading...</div>
+      <div>
+        <div className="relative">
+          <input
+            type={field.type === 'number' ? 'number' : field.type || 'text'}
+            name={field.name}
+            value={value}
+            onChange={(e) => handleFieldChange(field.name, e.target.value)}
+            onBlur={() => setTouchedFields(prev => new Set(prev).add(field.name))}
+            placeholder={field.placeholder}
+            required={field.required}
+            max={field.max_value || undefined}
+            min={field.type === 'number' ? 0 : undefined}
+            className={`w-full px-4 py-3.5 rounded-xl border transition-all duration-200 text-gray-800 ${
+              isAutoFilled && value ? 'bg-gray-50 cursor-not-allowed border-gray-200' : 'bg-white hover:border-blue-400'
+            } ${isInvalid ? 'border-red-400 ring-2 ring-red-100' : 'border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-100'}`}
+            readOnly={isAutoFilled && !!value}
+            step={field.type === 'number' ? 'any' : undefined}
+          />
+        </div>
+        {isInvalid && <p className="text-red-500 text-sm mt-1.5">{error}</p>}
+        {field.max_value && field.type === 'number' && (
+          <p className="text-xs text-gray-400 mt-1">Maximum value: {field.max_value}</p>
+        )}
+      </div>
+    );
+  };
+
+  const getDaysRemaining = (deadline: string) => {
+    const days = Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    return days;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-500">Loading application...</p>
         </div>
       </div>
     );
@@ -533,116 +448,274 @@ export default function ApplyScholarshipPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 text-center">
-            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Application Submitted!</h1>
-            <p className="text-gray-600 mb-6">
-              Your application for <strong>{scholarship?.title}</strong> has been submitted successfully.
-            </p>
-            <Link
-              href="/student/scholarships"
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors inline-block"
-            >
-              Back to Scholarships
-            </Link>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-10 max-w-md w-full text-center">
+          <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-5">
+            <CheckCircle className="w-10 h-10 text-green-500" />
           </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Application Submitted!</h1>
+          <p className="text-gray-600 mb-6">
+            Your application for <strong>{scholarship?.title}</strong> has been submitted successfully.
+          </p>
+          <Link
+            href="/student/scholarships"
+            className="inline-block bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl transition-colors font-medium"
+          >
+            Back to Scholarships
+          </Link>
         </div>
       </div>
     );
   }
 
+  const sections = getFullSections();
+  const section = getCurrentSection();
+  const fields = getCurrentFields();
+  const totalSteps = sections.length;
+  const daysLeft = scholarship?.deadline ? getDaysRemaining(scholarship.deadline) : null;
+  const isReview = section.id === 'review';
+
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6">
+      <div className="max-w-4xl mx-auto">
         <Link
           href="/student/scholarships"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+          className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6 transition-colors text-sm"
         >
-          <ArrowLeft size={20} />
-          Back to Scholarship
+          <ArrowLeft size={16} />
+          Back to Scholarships
         </Link>
 
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Apply for Scholarship</h1>
-          <p className="text-gray-600 mb-6">
-            Complete your application for: <strong>{scholarship?.title}</strong>
-          </p>
+        <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+          <div className="px-8 pt-8 pb-6 border-b border-gray-100">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">{scholarship?.title}</h1>
+                <div className="flex items-center gap-3 mt-2">
+                  <span className="inline-flex items-center gap-1.5 text-sm text-gray-500">
+                    <Award className="w-4 h-4" />
+                    Scholarship Application
+                  </span>
+                  {daysLeft !== null && (
+                    <span className={`inline-flex items-center gap-1.5 text-sm ${daysLeft < 7 ? 'text-red-500 font-medium' : 'text-gray-500'}`}>
+                      <Clock className="w-4 h-4" />
+                      {daysLeft < 0 ? 'Deadline passed' : `${daysLeft} days left`}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="text-sm text-gray-500 bg-gray-50 px-4 py-2 rounded-lg">
+                <span className="font-medium">{totalSteps} steps</span> to complete
+              </div>
+            </div>
+          </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
+            <div className="mx-8 mt-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
               {error}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-900 mb-2">Student Information</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+          <div className="p-8">
+            {/* Step Circles */}
+            <div className="flex items-center justify-between mb-8">
+              {sections.map((s, index) => {
+                const isCompleted = completedSections.has(s.id) || index < currentStep;
+                const isActive = index === currentStep;
+                const displayTitle = s.id === 'review' ? 'Review' : s.title.replace(/[^a-zA-Z0-9 ]/g, '').trim();
+                
+                return (
+                  <div key={s.id} className="flex items-center">
+                    <button
+                      type="button"
+                      onClick={() => goToStep(index)}
+                      disabled={index > currentStep}
+                      className="flex flex-col items-center"
+                    >
+                      <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+                        isCompleted ? 'bg-green-500 border-green-500 text-white' : 
+                        isActive ? 'bg-blue-600 border-blue-600 text-white shadow-md scale-105' : 
+                        'bg-white border-gray-300 text-gray-400'
+                      }`}>
+                        {isCompleted ? <CheckCircle className="w-4 h-4" /> : <span className="text-xs font-semibold">{index + 1}</span>}
+                      </div>
+                      <span className={`text-[10px] mt-1.5 font-medium ${
+                        isCompleted ? 'text-green-600' : isActive ? 'text-blue-600' : 'text-gray-400'
+                      }`}>
+                        {displayTitle}
+                      </span>
+                    </button>
+                    {index < sections.length - 1 && (
+                      <div className={`w-8 sm:w-12 h-0.5 mx-1 transition-colors duration-300 ${
+                        isCompleted ? 'bg-green-400' : 'bg-gray-200'
+                      }`} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Student Info */}
+            <div className="bg-blue-50/70 border border-blue-200 rounded-xl p-5 mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <User className="w-4 h-4 text-blue-600" />
+                <span className="font-medium text-blue-800">Student Information</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                 <div>
-                  <span className="text-blue-700">Name:</span>
-                  <p className="font-medium">{user?.name || 'Not logged in'}</p>
+                  <span className="text-blue-600 block text-xs uppercase tracking-wide">Name</span>
+                  <p className="font-medium text-gray-800 mt-0.5">{studentName || 'Not logged in'}</p>
                 </div>
                 <div>
-                  <span className="text-blue-700">Registration No:</span>
-                  <p className="font-medium">{user?.regno || 'Not logged in'}</p>
+                  <span className="text-blue-600 block text-xs uppercase tracking-wide">Registration No</span>
+                  <p className="font-medium text-gray-800 mt-0.5 font-mono">{studentRegno || 'Not logged in'}</p>
                 </div>
                 <div>
-                  <span className="text-blue-700">Email:</span>
-                  <p className="font-medium">{localStorage.getItem('studentEmail') || 'student@edu.pk'}</p>
+                  <span className="text-blue-600 block text-xs uppercase tracking-wide">Email</span>
+                  <p className="font-medium text-gray-800 mt-0.5">{studentEmail || 'Not provided'}</p>
                 </div>
               </div>
             </div>
 
-            {scholarship?.student_types?.includes('undergraduate') &&
-              scholarship?.student_types?.includes('graduate') && !studentType && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                  <h3 className="font-semibold text-yellow-900 mb-4">Select Your Student Type</h3>
-                  <div className="flex gap-4">
+            {/* 🔥 FIX: Use a DIV instead of FORM for navigation */}
+            <div>
+              <div className="border-b border-gray-200 pb-4 mb-6">
+                <h2 className="text-xl font-semibold text-gray-800">
+                  {isReview ? 'Review & Submit' : section.title.replace(/[^a-zA-Z0-9 ]/g, '').trim()}
+                </h2>
+                <p className="text-sm text-gray-400 mt-1">Step {currentStep + 1} of {sections.length}</p>
+              </div>
+
+              {isReview ? (
+                // 🔥 REVIEW SECTION - Only submit button here
+                <form onSubmit={handleSubmit}>
+                  <div className="space-y-4">
+                    <p className="text-gray-600 text-sm">Review your application before submitting.</p>
+                    {getAllSections().map((s) => {
+                      if (s.fields?.length === 0) return null;
+                      const isComplete = s.fields.every(f => isFieldValid(f));
+                      return (
+                        <div key={s.id} className={`border rounded-xl p-4 ${isComplete ? 'bg-green-50/70 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="font-medium text-gray-700">
+                              {s.title.replace(/[^a-zA-Z0-9 ]/g, '').trim()}
+                              <span className={`text-xs ml-2 px-2 py-0.5 rounded-full font-medium ${isComplete ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                {isComplete ? 'Complete' : 'Incomplete'}
+                              </span>
+                            </h4>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const index = sections.findIndex(sec => sec.id === s.id);
+                                if (index !== -1) setCurrentStep(index);
+                              }}
+                              className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1 font-medium"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                              Edit
+                            </button>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                            {s.fields.map((field) => {
+                              const value = formData[field.name];
+                              const isFile = field.type === 'file';
+                              const hasFile = documents[field.name] && documents[field.name].length > 0;
+                              if (!value && !isFile) return null;
+                              if (isFile && !hasFile) return null;
+                              return (
+                                <div key={field.name} className="flex justify-between py-1.5 border-b border-gray-100 last:border-0">
+                                  <span className="text-sm text-gray-500">{field.label}</span>
+                                  <span className="text-sm text-gray-800 font-medium">
+                                    {isFile ? `${documents[field.name]?.length || 0} file(s)` : value}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <div className="bg-yellow-50/80 border border-yellow-200 rounded-xl p-4 text-center">
+                      <p className="text-sm text-yellow-700">By submitting, you confirm all information is accurate.</p>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between pt-6 mt-8 border-t border-gray-200">
                     <button
                       type="button"
-                      onClick={() => setStudentType('undergraduate')}
-                      className="flex-1 bg-white border border-yellow-300 text-yellow-700 px-6 py-4 rounded-lg hover:bg-yellow-50 transition-colors text-center"
+                      onClick={prevStep}
+                      disabled={currentStep === 0}
+                      className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-medium text-sm"
                     >
-                      <div className="font-semibold">Undergraduate Student</div>
-                      <div className="text-sm text-yellow-600 mt-1">Bachelor's Program</div>
+                      <ChevronLeft size={16} />
+                      Previous
                     </button>
+
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="flex items-center gap-2 px-7 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl transition-colors disabled:opacity-50 font-medium text-sm shadow-sm"
+                    >
+                      <CheckCircle size={16} />
+                      {submitting ? 'Submitting...' : 'Submit Application'}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                // 🔥 NON-REVIEW SECTIONS - No form submission
+                <div>
+                  <div className="space-y-6">
+                    {fields.map((field) => (
+                      <div key={field.name}>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                          {field.label}
+                          {field.required && <span className="text-red-400 ml-1">*</span>}
+                          {field.max_value && field.type === 'number' && (
+                            <span className="text-xs text-gray-400 ml-2">(max: {field.max_value})</span>
+                          )}
+                        </label>
+                        {renderField(field)}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex justify-between pt-6 mt-8 border-t border-gray-200">
                     <button
                       type="button"
-                      onClick={() => setStudentType('graduate')}
-                      className="flex-1 bg-white border border-yellow-300 text-yellow-700 px-6 py-4 rounded-lg hover:bg-yellow-50 transition-colors text-center"
+                      onClick={prevStep}
+                      disabled={currentStep === 0}
+                      className="flex items-center gap-2 px-5 py-2.5 border border-gray-300 text-gray-600 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed font-medium text-sm"
                     >
-                      <div className="font-semibold">Graduate Student</div>
-                      <div className="text-sm text-yellow-600 mt-1">Master's/PhD Program</div>
+                      <ChevronLeft size={16} />
+                      Previous
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={nextStep}
+                      disabled={!isStepValid()}
+                      className="flex items-center gap-2 px-7 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors disabled:opacity-50 font-medium text-sm shadow-sm"
+                    >
+                      Next
+                      <ChevronRight size={16} />
                     </button>
                   </div>
                 </div>
               )}
-
-            {(studentType || (scholarship?.student_types?.length === 1)) && (
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Application Form</h3>
-                {renderFormFields()}
-              </div>
-            )}
-
-            <div className="flex gap-4 pt-6 border-t border-gray-200">
-              <Link
-                href={`/student/scholarships/${scholarshipId}`}
-                className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-200 transition-colors text-center"
-              >
-                Cancel
-              </Link>
-              <button
-                type="submit"
-                disabled={submitting || (!studentType && (scholarship?.student_types?.length || 0) > 1)}
-                className="flex-1 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {submitting ? 'Submitting...' : 'Submit Application'}
-              </button>
             </div>
-          </form>
+
+            <div className="mt-6">
+              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                <div
+                  className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
+                  style={{ width: `${((currentStep + 1) / totalSteps) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-400 text-center mt-2">
+                {Math.round(((currentStep + 1) / totalSteps) * 100)}% complete
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

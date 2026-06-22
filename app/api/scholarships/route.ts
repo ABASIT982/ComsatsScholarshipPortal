@@ -10,7 +10,25 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const forStudent = searchParams.get('forStudent') === 'true';
+    const id = searchParams.get('id');
 
+    // If we have an ID, get single scholarship
+    if (id) {
+      const { data, error } = await supabase
+        .from('scholarships')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching scholarship:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ scholarship: data });
+    }
+
+    // Otherwise get all scholarships
     let query = supabase.from('scholarships').select('*');
 
     if (forStudent) {
@@ -39,11 +57,10 @@ export async function POST(request: NextRequest) {
       deadline, 
       status = 'active',
       student_types = ['undergraduate'], 
-      form_template = 'custom',
-      custom_fields = [],
       number_of_awards = 0,
       scholarship_mode = 'single',
-      tiers = []
+      tiers = [],
+      form_sections = []
     } = await request.json();
 
     if (!title || !description || !deadline) {
@@ -71,7 +88,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validation for single mode
     if (scholarship_mode === 'single' && (!number_of_awards || number_of_awards <= 0)) {
       return NextResponse.json(
         { error: 'Number of awards is required for single scholarship mode' },
@@ -79,7 +95,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validation for tiered mode
     if (scholarship_mode === 'tiered' && tiers.length === 0) {
       return NextResponse.json(
         { error: 'At least one tier is required for tiered scholarship mode' },
@@ -94,9 +109,9 @@ export async function POST(request: NextRequest) {
       status,
       student_types, 
       form_template: 'custom',
-      custom_fields: custom_fields,
+      form_sections: form_sections,
       number_of_awards: scholarship_mode === 'single' ? number_of_awards : 0,
-      scholarship_mode: scholarship_mode,  // NEW
+      scholarship_mode: scholarship_mode,
       created_by: null
     };
 
@@ -113,54 +128,28 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    if (custom_fields.length > 0) {
-      const formFieldsData = custom_fields.map((field: any, index: number) => ({
+    // Save tiers for tiered mode
+    if (scholarship_mode === 'tiered' && tiers && tiers.length > 0) {
+      const tierData = tiers.map((tier: any, index: number) => ({
         scholarship_id: data.id,
-        field_type: field.type,
-        field_label: field.label,
-        field_name: field.name,
-        placeholder: field.placeholder || '',
-        is_required: field.required || false,
-        field_order: index,
-        validation_rules: field.validation || {},
-        options: field.options || null
+        tier_name: tier.tier_name,
+        min_score: tier.min_score,
+        max_score: tier.max_score,
+        award_description: tier.award_description,
+        award_amount: tier.award_amount,
+        tier_order: index
       }));
 
-      const { error: fieldsError } = await supabase
-        .from('scholarship_form_fields')
-        .insert(formFieldsData);
+      const { error: tierError } = await supabase
+        .from('scholarship_tiers')
+        .insert(tierData);
 
-      if (fieldsError) {
-        console.error('Error saving custom form fields:', fieldsError);
+      if (tierError) {
+        console.error('Error saving scholarship tiers:', tierError);
       }
     }
 
-// Save scholarship tiers for tiered mode
-if (scholarship_mode === 'tiered' && tiers && tiers.length > 0) {
-  console.log('💾 SAVING TIERS:', tiers.length);
-  
-  const tierData = tiers.map((tier: any, index: number) => ({
-    scholarship_id: data.id,
-    tier_name: tier.tier_name,
-    min_score: tier.min_score,
-    max_score: tier.max_score,
-    award_description: tier.award_description,
-    award_amount: tier.award_amount,
-    tier_order: index
-  }));
-
-  const { error: tierError } = await supabase
-    .from('scholarship_tiers')
-    .insert(tierData);
-
-  if (tierError) {
-    console.error('Error saving scholarship tiers:', tierError);
-  } else {
-    console.log('✅ Tiers saved successfully!');
-  }
-}
-
-    // Send notifications to students
+    // ========== SEND NOTIFICATIONS TO STUDENTS ==========
     try {
       console.log('📢 Starting notification process for new scholarship...');
       
@@ -174,7 +163,7 @@ if (scholarship_mode === 'tiered' && tiers && tiers.length > 0) {
         console.log(`📢 Found ${students?.length || 0} students`);
         
         if (students && students.length > 0) {
-          const notifications = students.map(student => ({
+          const notifications = students.map((student: any) => ({
             user_id: student.regno,
             user_type: 'student',
             type: 'new_scholarship',
@@ -199,8 +188,10 @@ if (scholarship_mode === 'tiered' && tiers && tiers.length > 0) {
           if (notifError) {
             console.error('❌ Error inserting notifications:', notifError);
           } else {
-            console.log(`✅ Successfully sent notifications to ${students.length} students`);
+            console.log(`✅ Successfully sent ${notifications.length} notifications to students`);
           }
+        } else {
+          console.log('📢 No students found in database, skipping notifications');
         }
       }
     } catch (notifError) {
@@ -221,6 +212,8 @@ if (scholarship_mode === 'tiered' && tiers && tiers.length > 0) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const body = await request.json();
+    
     const { 
       id,
       title, 
@@ -228,33 +221,30 @@ export async function PUT(request: NextRequest) {
       deadline, 
       status,
       student_types,
-      form_template,
-      custom_fields = [],
       scoring_criteria,
       number_of_awards,
       scholarship_mode,
-      tiers
-    } = await request.json();
+      tiers,
+      form_sections
+    } = body;
 
     if (!id) {
       return NextResponse.json({ error: 'Scholarship ID is required' }, { status: 400 });
     }
 
+    // Build update data
     const updateData: any = {};
-    if (title) updateData.title = title.trim();
-    if (description) updateData.description = description.trim();
-    if (deadline) updateData.deadline = deadline;
-    if (status) updateData.status = status;
-    if (student_types) updateData.student_types = student_types;
-    if (form_template) updateData.form_template = form_template;
-    if (form_template === 'custom') {
-      updateData.custom_fields = custom_fields;
-    } else {
-      updateData.custom_fields = [];
-    }
+    if (title !== undefined) updateData.title = title.trim();
+    if (description !== undefined) updateData.description = description.trim();
+    if (deadline !== undefined) updateData.deadline = deadline;
+    if (status !== undefined) updateData.status = status;
+    if (student_types !== undefined) updateData.student_types = student_types;
     if (scoring_criteria !== undefined) updateData.scoring_criteria = scoring_criteria;
     if (number_of_awards !== undefined) updateData.number_of_awards = number_of_awards;
     if (scholarship_mode !== undefined) updateData.scholarship_mode = scholarship_mode;
+    
+    // Always save form_sections
+    updateData.form_sections = form_sections || [];
 
     const { data, error } = await supabase
       .from('scholarships')
@@ -270,47 +260,13 @@ export async function PUT(request: NextRequest) {
       }, { status: 500 });
     }
 
-    if (form_template === 'custom' && custom_fields.length > 0) {
-      await supabase
-        .from('scholarship_form_fields')
-        .delete()
-        .eq('scholarship_id', id);
-
-      const formFieldsData = custom_fields.map((field: any, index: number) => ({
-        scholarship_id: id,
-        field_type: field.type,
-        field_label: field.label,
-        field_name: field.name,
-        placeholder: field.placeholder || '',
-        is_required: field.required || false,
-        field_order: index,
-        validation_rules: field.validation || {},
-        options: field.options || null
-      }));
-
-      const { error: fieldsError } = await supabase
-        .from('scholarship_form_fields')
-        .insert(formFieldsData);
-
-      if (fieldsError) {
-        console.error('Error updating custom form fields:', fieldsError);
-      }
-    } else if (form_template !== 'custom') {
-      await supabase
-        .from('scholarship_form_fields')
-        .delete()
-        .eq('scholarship_id', id);
-    }
-
-    // NEW: Update tiers for tiered mode
+    // Update tiers for tiered mode
     if (scholarship_mode === 'tiered' && tiers && tiers.length > 0) {
-      // Delete existing tiers
       await supabase
         .from('scholarship_tiers')
         .delete()
         .eq('scholarship_id', id);
 
-      // Insert new tiers
       const tierData = tiers.map((tier: any, index: number) => ({
         scholarship_id: id,
         tier_name: tier.tier_name,
@@ -321,15 +277,10 @@ export async function PUT(request: NextRequest) {
         tier_order: index
       }));
 
-      const { error: tierError } = await supabase
+      await supabase
         .from('scholarship_tiers')
         .insert(tierData);
-
-      if (tierError) {
-        console.error('Error updating scholarship tiers:', tierError);
-      }
     } else if (scholarship_mode === 'single') {
-      // Delete tiers if switching to single mode
       await supabase
         .from('scholarship_tiers')
         .delete()

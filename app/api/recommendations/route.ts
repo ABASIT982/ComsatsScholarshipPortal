@@ -9,7 +9,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'student_regno is required' }, { status: 400 })
   }
 
-  // Get student's approved applications
+  // Get student's ALL applications (not just approved) to check if they already applied
+  const { data: allApps } = await supabase
+    .from('scholarship_applications')
+    .select('*')
+    .eq('student_regno', studentRegno)
+
+  // Get student's approved applications for marks
   const { data: approvedApps } = await supabase
     .from('scholarship_applications')
     .select('*')
@@ -74,8 +80,11 @@ export async function GET(req: NextRequest) {
   const recommendations: any[] = []
 
   for (const scholarship of activeScholarships) {
-    const alreadyApplied = approvedApps.some((a: any) => a.scholarship_id === scholarship.id)
-    if (alreadyApplied) continue
+    // Check if student already applied (any status)
+    const alreadyApplied = allApps?.some((a: any) => a.scholarship_id === scholarship.id) || false
+
+    // DON'T skip - we want to show it with "Already Applied" button
+    // if (alreadyApplied) continue;
 
     const criteria = scholarship.scoring_criteria || []
     let matchPercentage = 0
@@ -142,13 +151,13 @@ export async function GET(req: NextRequest) {
         title: scholarship.title,
         description: scholarship.description,
         deadline: scholarship.deadline,
-        amount: getAmount(scholarship.title),
         matchPercentage: matchPercentage,
         selectionProbability: matchPercentage,
         historicalSuccessRate: 70,
         competitionFactor: 50,
         awardsAvailable: scholarship.number_of_awards || 1,
         totalApplicants: 0,
+        alreadyApplied: alreadyApplied,
         reason: `You have a ${matchPercentage}% match with this scholarship based on your academic profile.`,
         matchDetails: matchDetails
       })
@@ -158,11 +167,4 @@ export async function GET(req: NextRequest) {
   recommendations.sort((a, b) => b.matchPercentage - a.matchPercentage)
 
   return NextResponse.json({ recommendations, count: recommendations.length, studentMarks })
-}
-
-function getAmount(title: string): string {
-  if (title.toLowerCase().includes('merit')) return '$5,000'
-  if (title.toLowerCase().includes('need')) return '$3,000'
-  if (title.toLowerCase().includes('sports')) return '$2,000'
-  return 'Varies'
 }

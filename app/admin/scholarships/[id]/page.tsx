@@ -1,8 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Plus, Trash2, Award, Layers } from 'lucide-react';
-import { TEMPLATE_OPTIONS } from '@/lib/form-templates';
+import { ArrowLeft, Save, Plus, Trash2, Award, Layers, GripVertical } from 'lucide-react';
 import toast, { Toaster } from 'react-hot-toast';
 
 type CustomField = {
@@ -12,6 +11,13 @@ type CustomField = {
   required: boolean;
   placeholder: string;
   max_value: number | null;
+};
+
+type FormSection = {
+  id: string;
+  title: string;
+  icon: string;
+  fields: CustomField[];
 };
 
 type ScoringCriterion = {
@@ -31,6 +37,14 @@ type Tier = {
   award_amount: string;
 };
 
+type FormFieldOption = {
+  name: string;
+  label: string;
+  type: string;
+};
+
+const ICON_OPTIONS = ['👤', '📚', '📄', '🏠', '🎓', '📝', '📷', '⚙️', '❤️', '⭐', '💰', '🏆', '📞', '✉️'];
+
 export default function EditScholarshipPage() {
   const params = useParams();
   const router = useRouter();
@@ -47,228 +61,206 @@ export default function EditScholarshipPage() {
     deadline: '',
     status: 'active',
     student_types: ['undergraduate'],
-    form_template: 'basic',
-    custom_fields: [] as CustomField[],
     number_of_awards: 0,
-    scholarship_mode: 'single'  // NEW
+    scholarship_mode: 'single'
   });
 
-  const [customFields, setCustomFields] = useState<CustomField[]>([]);
+  const [sections, setSections] = useState<FormSection[]>([]);
   const [scoringCriteria, setScoringCriteria] = useState<ScoringCriterion[]>([]);
   const [totalWeight, setTotalWeight] = useState(0);
-  const [tiers, setTiers] = useState<Tier[]>([]);  // NEW
+  const [tiers, setTiers] = useState<Tier[]>([]);
 
-  // Fetch scholarship data on component mount
+  // ========== FETCH SCHOLARSHIP ==========
   useEffect(() => {
     fetchScholarship();
   }, [scholarshipId]);
 
-  // Calculate total weight whenever criteria changes
+  // ========== CALCULATE TOTAL WEIGHT ==========
   useEffect(() => {
-    const total = scoringCriteria.reduce((sum, c) => sum + (c.weight || 0), 0);
+    const total = scoringCriteria.reduce((sum: number, c: ScoringCriterion) => sum + (c.weight || 0), 0);
     setTotalWeight(total);
   }, [scoringCriteria]);
 
-  const fetchScholarship = async () => {
-    try {
-      console.log('🔄 Fetching scholarship for edit:', scholarshipId);
+const fetchScholarship = async () => {
+  try {
+    console.log('🔄 Fetching scholarship:', scholarshipId);
+    
+    const response = await fetch(`/api/scholarships/${scholarshipId}`);
+    const data = await response.json();
 
-      const response = await fetch(`/api/scholarships/${scholarshipId}`);
-      const data = await response.json();
+    console.log('📦 Full API response:', data);
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch scholarship');
-      }
-
-      if (data.scholarship) {
-        console.log('✅ Scholarship data loaded:', data.scholarship);
-
-        setFormData({
-          title: data.scholarship.title,
-          description: data.scholarship.description,
-          deadline: data.scholarship.deadline.split('T')[0],
-          status: data.scholarship.status,
-          student_types: data.scholarship.student_types || ['undergraduate'],
-          form_template: data.scholarship.form_template || 'basic',
-          custom_fields: data.scholarship.custom_fields || [],
-          number_of_awards: data.scholarship.number_of_awards || 0,
-          scholarship_mode: data.scholarship.scholarship_mode || 'single'  // NEW
-        });
-
-        // Set custom fields if they exist
-        if (data.scholarship.custom_fields) {
-          setCustomFields(data.scholarship.custom_fields);
-        }
-
-        // Set scoring criteria if it exists
-        if (data.scholarship.scoring_criteria) {
-          setScoringCriteria(data.scholarship.scoring_criteria);
-        }
-
-        // NEW: Set tiers if they exist
-        if (data.scholarship.tiers && data.scholarship.tiers.length > 0) {
-          setTiers(data.scholarship.tiers);
-        }
-      }
-    } catch (err: any) {
-      console.error('❌ Error fetching scholarship:', err);
-      setError(err.message);
-    } finally {
-      setFetchLoading(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    // Basic validation
-    if (!formData.title.trim() || !formData.description.trim() || !formData.deadline) {
-      setError('Please fill in all required fields');
-      setLoading(false);
-      return;
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to fetch scholarship');
     }
 
-    // ✅ FIX: Only validate scoring criteria if on criteria tab
-    if (activeTab === 'criteria') {
-      if (scoringCriteria.length === 0) {
-        setError('Please add at least one scoring criterion');
-        setLoading(false);
-        return;
-      }
-      if (totalWeight !== 100) {
-        setError(`Total weight must be 100%. Current: ${totalWeight}%`);
-        setLoading(false);
-        return;
-      }
-    }
-
-    // Validate tiers for tiered mode (only if on tiers tab)
-    if (activeTab === 'tiers' && formData.scholarship_mode === 'tiered' && tiers.length === 0) {
-      setError('Please add at least one tier for tiered scholarship mode');
-      setLoading(false);
-      return;
-    }
-
-    // Prepare submission data - keep existing data for fields not in current tab
-    const submissionData = {
-      ...formData,
-      custom_fields: formData.form_template === 'custom' ? customFields : [],
-      scoring_criteria: scoringCriteria,  // Keep existing criteria
-      number_of_awards: formData.scholarship_mode === 'single' ? formData.number_of_awards : 0,
-      scholarship_mode: formData.scholarship_mode,
-      tiers: formData.scholarship_mode === 'tiered' ? tiers : []
-    };
-
-    try {
-      const response = await fetch(`/api/scholarships/${scholarshipId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(submissionData),
+    if (data.success && data.scholarship) {
+      setFormData({
+        title: data.scholarship.title || '',
+        description: data.scholarship.description || '',
+        deadline: data.scholarship.deadline ? data.scholarship.deadline.split('T')[0] : '',
+        status: data.scholarship.status || 'active',
+        student_types: data.scholarship.student_types || ['undergraduate'],
+        number_of_awards: data.scholarship.number_of_awards || 0,
+        scholarship_mode: data.scholarship.scholarship_mode || 'single'
       });
 
-      const data = await response.json();
+      // Load sections
+      let loadedSections: FormSection[] = [];
+      if (data.scholarship.form_sections && Array.isArray(data.scholarship.form_sections) && data.scholarship.form_sections.length > 0) {
+        loadedSections = data.scholarship.form_sections;
+      } else {
+        loadedSections = [{
+          id: 'section_1',
+          title: 'Form Fields',
+          icon: '📄',
+          fields: []
+        }];
+      }
+      setSections(loadedSections);
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to update scholarship');
+      if (data.scholarship.scoring_criteria) {
+        setScoringCriteria(data.scholarship.scoring_criteria);
       }
 
-      // Just redirect without toast
-      setTimeout(() => {
-        router.push('/admin/scholarships?updated=true');
-      }, 500);
-
-    } catch (err: any) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      // Load tiers from the scholarship data
+      if (data.scholarship.tiers && data.scholarship.tiers.length > 0) {
+        console.log('✅ Loading tiers:', data.scholarship.tiers);
+        setTiers(data.scholarship.tiers);
+      } else {
+        console.log('ℹ️ No tiers found');
+        setTiers([]);
+      }
     }
-  };
+  } catch (err: any) {
+    console.error('❌ Error fetching scholarship:', err);
+    setError(err.message);
+  } finally {
+    setFetchLoading(false);
+  }
+};
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  // Handle student type selection
-  const handleStudentTypeChange = (studentType: string, checked: boolean) => {
-    setFormData(prev => {
-      const types = checked
-        ? [...prev.student_types, studentType]
-        : prev.student_types.filter(t => t !== studentType);
-
-      if (types.length === 0) return prev;
-      return { ...prev, student_types: types };
+  const getAllFormFields = (): FormFieldOption[] => {
+    const fields: FormFieldOption[] = [];
+    sections.forEach((section: FormSection) => {
+      section.fields.forEach((field: CustomField) => {
+        if (field.label && field.name) {
+          fields.push({
+            name: field.name,
+            label: field.label,
+            type: field.type
+          });
+        }
+      });
     });
+    return fields;
   };
 
-  // Add custom field
-  const addCustomField = () => {
-    setCustomFields(prev => [
-      ...prev,
-      {
-        type: 'text',
-        label: '',
-        name: '',
-        required: false,
-        placeholder: '',
-        max_value: null
-      }
-    ]);
+  // ========== SECTION FUNCTIONS ==========
+
+  const addSection = (): void => {
+    setSections(prev => [...prev, {
+      id: `section_${Date.now()}`,
+      title: `Section ${prev.length + 1}`,
+      icon: '📄',
+      fields: []
+    }]);
+    toast.success('New section added!');
   };
 
-  // Update custom field
-  const updateCustomField = (index: number, field: keyof CustomField, value: any) => {
-    const updated = [...customFields];
-    updated[index] = { ...updated[index], [field]: value };
+  const updateSectionTitle = (index: number, title: string): void => {
+    const updated = [...sections];
+    updated[index].title = title;
+    setSections(updated);
+  };
+
+  const updateSectionIcon = (index: number, icon: string): void => {
+    const updated = [...sections];
+    updated[index].icon = icon;
+    setSections(updated);
+  };
+
+  const removeSection = (index: number): void => {
+    if (sections.length <= 1) {
+      toast.error('At least one section is required');
+      return;
+    }
+    setSections(prev => prev.filter((_: FormSection, i: number) => i !== index));
+  };
+
+  const moveSectionUp = (index: number): void => {
+    if (index === 0) return;
+    const updated = [...sections];
+    [updated[index], updated[index - 1]] = [updated[index - 1], updated[index]];
+    setSections(updated);
+  };
+
+  const moveSectionDown = (index: number): void => {
+    if (index === sections.length - 1) return;
+    const updated = [...sections];
+    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+    setSections(updated);
+  };
+
+  const addFieldToSection = (sectionIndex: number): void => {
+    const updated = [...sections];
+    updated[sectionIndex].fields.push({
+      type: 'text',
+      label: '',
+      name: '',
+      required: false,
+      placeholder: '',
+      max_value: null
+    });
+    setSections(updated);
+  };
+
+  const updateFieldInSection = (
+    sectionIndex: number,
+    fieldIndex: number,
+    field: keyof CustomField,
+    value: string | number | boolean | null
+  ): void => {
+    const updated = [...sections];
+    const fieldData = updated[sectionIndex].fields[fieldIndex];
 
     if (field === 'label') {
-      updated[index].name = value.toLowerCase().replace(/\s+/g, '_');
+      fieldData.label = value as string;
+      fieldData.name = (value as string).toLowerCase().replace(/\s+/g, '_');
+    } else if (field === 'type') {
+      fieldData.type = value as string;
+    } else if (field === 'name') {
+      fieldData.name = value as string;
+    } else if (field === 'placeholder') {
+      fieldData.placeholder = value as string;
+    } else if (field === 'required') {
+      fieldData.required = value as boolean;
+    } else if (field === 'max_value') {
+      fieldData.max_value = value as number | null;
     }
 
-    setCustomFields(updated);
+    setSections(updated);
   };
 
-  // Remove custom field
-  const removeCustomField = (index: number) => {
-    setCustomFields(prev => prev.filter((_, i) => i !== index));
+  const removeFieldFromSection = (sectionIndex: number, fieldIndex: number): void => {
+    const updated = [...sections];
+    updated[sectionIndex].fields = updated[sectionIndex].fields.filter((_: CustomField, i: number) => i !== fieldIndex);
+    setSections(updated);
   };
 
-  // NEW: Tier functions
-  const addTier = () => {
-    setTiers(prev => [...prev, {
-      id: Date.now().toString(),
-      tier_name: '',
-      min_score: 0,
-      max_score: 100,
-      award_description: '',
-      award_amount: ''
-    }]);
-  };
+  // ========== CRITERIA FUNCTIONS ==========
 
-  const updateTier = (index: number, field: keyof Tier, value: any) => {
-    const updated = [...tiers];
-    updated[index] = { ...updated[index], [field]: value };
-    setTiers(updated);
-  };
+  const addCriterion = (): void => {
+    const allFields = getAllFormFields();
+    const usedFieldNames = scoringCriteria.map((c: ScoringCriterion) => c.fieldName);
+    const availableFields = allFields.filter((f: FormFieldOption) => !usedFieldNames.includes(f.name));
 
-  const removeTier = (index: number) => {
-    setTiers(prev => prev.filter((_, i) => i !== index));
-  };
-
-  // ============ SCORING CRITERIA FUNCTIONS ============
-
-  // Add new criterion
-  const addCriterion = () => {
-    const availableFields = getAvailableFormFields();
     if (availableFields.length === 0) {
-      alert('No form fields available. Add custom fields first.');
+      if (allFields.length === 0) {
+        toast.error('No fields found. Add fields to sections first.');
+      } else {
+        toast.error('All fields are already used in criteria.');
+      }
       return;
     }
 
@@ -282,14 +274,12 @@ export default function EditScholarshipPage() {
     setScoringCriteria(prev => [...prev, newCriterion]);
   };
 
-  // Update criterion
-  const updateCriterion = (index: number, field: keyof ScoringCriterion, value: any) => {
+  const updateCriterion = (index: number, field: keyof ScoringCriterion, value: any): void => {
     const updated = [...scoringCriteria];
 
     if (field === 'fieldName') {
-      // Find the selected field to get its label
       const allFields = getAllFormFields();
-      const selectedField = allFields.find(f => f.name === value);
+      const selectedField = allFields.find((f: FormFieldOption) => f.name === value);
       if (selectedField) {
         updated[index] = {
           ...updated[index],
@@ -304,45 +294,155 @@ export default function EditScholarshipPage() {
     setScoringCriteria(updated);
   };
 
-  // Remove criterion
-  const removeCriterion = (index: number) => {
-    setScoringCriteria(prev => prev.filter((_, i) => i !== index));
+  const removeCriterion = (index: number): void => {
+    setScoringCriteria(prev => prev.filter((_: ScoringCriterion, i: number) => i !== index));
   };
 
-  // Get all form fields (template + custom)
-  type FormFieldOption = {
-    name: string;
-    label: string;
-    type: string;
+  // ========== TIER FUNCTIONS ==========
+
+  const addTier = (): void => {
+    setTiers(prev => [...prev, {
+      id: Date.now().toString(),
+      tier_name: '',
+      min_score: 0,
+      max_score: 100,
+      award_description: '',
+      award_amount: ''
+    }]);
   };
 
-  const getAllFormFields = (): FormFieldOption[] => {
-    const fields: FormFieldOption[] = [];
+  const updateTier = (index: number, field: keyof Tier, value: any): void => {
+    const updated = [...tiers];
+    updated[index] = { ...updated[index], [field]: value };
+    setTiers(updated);
+  };
 
-    if (formData.form_template !== 'custom') {
-      // This would come from your template definitions
+  const removeTier = (index: number): void => {
+    setTiers(prev => prev.filter((_: Tier, i: number) => i !== index));
+  };
+
+  // ========== FORM HANDLERS ==========
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>): void => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleStudentTypeChange = (studentType: string, checked: boolean): void => {
+    setFormData(prev => {
+      const types = checked
+        ? [...prev.student_types, studentType]
+        : prev.student_types.filter((t: string) => t !== studentType);
+      if (types.length === 0) return prev;
+      return { ...prev, student_types: types };
+    });
+  };
+
+  // ========== SUBMIT ==========
+
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    // Validation
+    if (!formData.title.trim() || !formData.description.trim() || !formData.deadline) {
+      setError('Please fill in all required fields');
+      setLoading(false);
+      return;
     }
 
-    customFields.forEach(field => {
-      if (field.label && field.name) {
-        fields.push({
-          name: field.name,
-          label: field.label,
-          type: field.type
-        });
+    const hasEmptySection = sections.some((section: FormSection) => section.fields.length === 0);
+    if (hasEmptySection) {
+      setError('All sections must have at least one field');
+      setLoading(false);
+      return;
+    }
+
+    const hasEmptyLabel = sections.some((section: FormSection) => 
+      section.fields.some((field: CustomField) => !field.label.trim())
+    );
+    if (hasEmptyLabel) {
+      setError('All fields must have a label');
+      setLoading(false);
+      return;
+    }
+
+    if (scoringCriteria.length === 0) {
+      setError('Please add at least one scoring criterion');
+      setLoading(false);
+      return;
+    }
+
+    if (totalWeight !== 100) {
+      setError(`Total weight must be 100%. Current: ${totalWeight}%`);
+      setLoading(false);
+      return;
+    }
+
+    if (formData.scholarship_mode === 'tiered' && tiers.length === 0) {
+      setError('Please add at least one tier');
+      setLoading(false);
+      return;
+    }
+
+    // Format sections
+    const formattedSections = sections.map((section: FormSection) => ({
+      id: section.id,
+      title: section.title,
+      icon: section.icon,
+      fields: section.fields.map((field: CustomField) => ({
+        type: field.type,
+        label: field.label,
+        name: field.name,
+        required: field.required,
+        placeholder: field.placeholder || '',
+        max_value: field.max_value || null
+      }))
+    }));
+
+    const submissionData = {
+      id: scholarshipId,
+      title: formData.title,
+      description: formData.description,
+      deadline: formData.deadline,
+      status: formData.status,
+      student_types: formData.student_types,
+      form_sections: formattedSections,
+      scoring_criteria: scoringCriteria,
+      number_of_awards: formData.scholarship_mode === 'single' ? formData.number_of_awards : 0,
+      scholarship_mode: formData.scholarship_mode,
+      tiers: tiers  // 🔥 Save tiers
+    };
+
+    console.log('📤 Submitting tiers:', tiers);
+
+    try {
+      const response = await fetch(`/api/scholarships?id=${scholarshipId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submissionData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update scholarship');
       }
-    });
 
-    return fields;
+      toast.success('Scholarship updated successfully!');
+      setTimeout(() => {
+        router.push('/admin/scholarships?updated=true');
+      }, 1000);
+
+    } catch (err: any) {
+      setError(err.message);
+      toast.error(`Failed: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getAvailableFormFields = (): FormFieldOption[] => {
-    const allFields = getAllFormFields();
-    const usedFieldNames = scoringCriteria.map(c => c.fieldName);
-    return allFields.filter(f => !usedFieldNames.includes(f.name));
-  };
-
-  // Set minimum date to today for deadline
   const today = new Date().toISOString().split('T')[0];
 
   if (fetchLoading) {
@@ -357,13 +457,11 @@ export default function EditScholarshipPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
+      <div className="max-w-6xl mx-auto">
+        <Toaster position="top-center" />
+
         <div className="flex items-center gap-4 mb-8">
-          <button
-            onClick={() => router.back()}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-          >
+          <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-600 hover:text-gray-900">
             <ArrowLeft size={20} />
             Back
           </button>
@@ -373,51 +471,50 @@ export default function EditScholarshipPage() {
           </div>
         </div>
 
-        {/* Tabs */}
         <div className="flex gap-4 mb-6 border-b border-gray-200">
           <button
             onClick={() => setActiveTab('details')}
-            className={`px-4 py-2 font-medium transition-colors ${activeTab === 'details'
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === 'details'
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
-              }`}
+            }`}
           >
             Scholarship Details
           </button>
           <button
             onClick={() => setActiveTab('criteria')}
-            className={`px-4 py-2 font-medium transition-colors ${activeTab === 'criteria'
+            className={`px-4 py-2 font-medium transition-colors ${
+              activeTab === 'criteria'
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
-              }`}
+            }`}
           >
             Scoring Criteria {scoringCriteria.length > 0 && `(${scoringCriteria.length})`}
           </button>
           <button
             onClick={() => setActiveTab('tiers')}
-            className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${activeTab === 'tiers'
+            className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+              activeTab === 'tiers'
                 ? 'text-blue-600 border-b-2 border-blue-600'
                 : 'text-gray-500 hover:text-gray-700'
-              }`}
+            }`}
           >
             <Layers size={16} />
             Tiers {formData.scholarship_mode === 'tiered' && tiers.length > 0 && `(${tiers.length})`}
           </button>
         </div>
 
-        {/* Error Message */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
             {error}
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           {activeTab === 'details' ? (
-            /* ============ DETAILS TAB ============ */
             <div className="space-y-6">
-              {/* NEW: Scholarship Mode Selection */}
+              {/* Scholarship Mode */}
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                 <label className="block text-sm font-medium text-gray-700 mb-3">Scholarship Award Type</label>
                 <div className="flex gap-6">
@@ -430,7 +527,7 @@ export default function EditScholarshipPage() {
                       onChange={(e) => setFormData(prev => ({ ...prev, scholarship_mode: e.target.value }))}
                       className="w-4 h-4 text-blue-600"
                     />
-                    <span className="text-gray-700">Single Scholarship (All get same)</span>
+                    <span className="text-gray-700">Single Scholarship</span>
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -441,12 +538,11 @@ export default function EditScholarshipPage() {
                       onChange={(e) => setFormData(prev => ({ ...prev, scholarship_mode: e.target.value }))}
                       className="w-4 h-4 text-blue-600"
                     />
-                    <span className="text-gray-700">Tiered Scholarship (Different awards)</span>
+                    <span className="text-gray-700">Tiered Scholarship</span>
                   </label>
                 </div>
               </div>
 
-              {/* Number of Awards - Only for Single Mode */}
               {formData.scholarship_mode === 'single' && (
                 <div>
                   <label htmlFor="number_of_awards" className="block text-sm font-medium text-gray-700 mb-2">
@@ -459,17 +555,12 @@ export default function EditScholarshipPage() {
                     value={formData.number_of_awards}
                     onChange={handleChange}
                     min="1"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    required={formData.scholarship_mode === 'single'}
-                    disabled={loading}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                    required
                   />
-                  <p className="text-sm text-gray-500 mt-1">
-                    Top N students will be selected from the merit list
-                  </p>
                 </div>
               )}
 
-              {/* Title */}
               <div>
                 <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
                   Scholarship Title *
@@ -481,13 +572,11 @@ export default function EditScholarshipPage() {
                   value={formData.title}
                   onChange={handleChange}
                   placeholder="e.g., Need-Based Scholarship 2024"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg"
                   required
-                  disabled={loading}
                 />
               </div>
 
-              {/* Description */}
               <div>
                 <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
                   Description & Details *
@@ -499,13 +588,11 @@ export default function EditScholarshipPage() {
                   onChange={handleChange}
                   rows={8}
                   placeholder="Include all details like eligibility, benefits, etc."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-vertical"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-vertical"
                   required
-                  disabled={loading}
                 />
               </div>
 
-              {/* Student Type Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Student Types *
@@ -516,8 +603,7 @@ export default function EditScholarshipPage() {
                       type="checkbox"
                       checked={formData.student_types.includes('undergraduate')}
                       onChange={(e) => handleStudentTypeChange('undergraduate', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                      disabled={loading}
+                      className="w-4 h-4 text-blue-600 rounded"
                     />
                     <span className="text-gray-700">Undergraduate Students</span>
                   </label>
@@ -526,122 +612,148 @@ export default function EditScholarshipPage() {
                       type="checkbox"
                       checked={formData.student_types.includes('graduate')}
                       onChange={(e) => handleStudentTypeChange('graduate', e.target.checked)}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                      disabled={loading}
+                      className="w-4 h-4 text-blue-600 rounded"
                     />
                     <span className="text-gray-700">Graduate Students</span>
                   </label>
                 </div>
               </div>
 
-              {/* Form Template Selection */}
-              <div>
-                <label htmlFor="form_template" className="block text-sm font-medium text-gray-700 mb-2">
-                  Application Form Type *
-                </label>
-                <select
-                  id="form_template"
-                  name="form_template"
-                  value={formData.form_template}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  disabled={loading}
-                >
-                  {TEMPLATE_OPTIONS.map(template => (
-                    <option key={template.value} value={template.value}>
-                      {template.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-sm text-gray-500 mt-2">
-                  {TEMPLATE_OPTIONS.find(t => t.value === formData.form_template)?.description}
-                </p>
-              </div>
+              {/* FORM SECTIONS BUILDER */}
+              <div className="border-t pt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-medium text-gray-900 flex items-center gap-2">
+                    <GripVertical size={20} />
+                    Form Sections (Tabs)
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={addSection}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                  >
+                    <Plus size={18} />
+                    Add Section
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500 mb-4">Each section becomes a tab in the student application form.</p>
 
-              {/* Custom Fields Builder */}
-              {formData.form_template === 'custom' && (
-                <div className="border-t pt-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-gray-900">Custom Form Fields</h3>
-                    <button
-                      type="button"
-                      onClick={addCustomField}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-                    >
-                      <Plus size={18} />
-                      Add Field
-                    </button>
-                  </div>
+                {sections.map((section: FormSection, sectionIndex: number) => (
+                  <div key={section.id} className="border border-gray-200 rounded-lg p-4 mb-4 bg-gray-50">
+                    <div className="flex items-center gap-3 mb-3">
+                      <select
+                        value={section.icon}
+                        onChange={(e) => updateSectionIcon(sectionIndex, e.target.value)}
+                        className="w-14 px-2 py-2 border rounded text-center text-xl"
+                      >
+                        {ICON_OPTIONS.map((icon: string) => (
+                          <option key={icon} value={icon}>{icon}</option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        value={section.title}
+                        onChange={(e) => updateSectionTitle(sectionIndex, e.target.value)}
+                        placeholder="Section Title"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => moveSectionUp(sectionIndex)}
+                          className="text-gray-500 hover:text-gray-700 p-1"
+                          title="Move Up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => moveSectionDown(sectionIndex)}
+                          className="text-gray-500 hover:text-gray-700 p-1"
+                          title="Move Down"
+                        >
+                          ↓
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeSection(sectionIndex)}
+                          className="text-red-600 hover:text-red-800 p-1"
+                          title="Remove Section"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
+                    </div>
 
-                  {customFields.length === 0 ? (
-                    <p className="text-gray-500 text-center py-4 border-2 border-dashed border-gray-200 rounded-lg">
-                      No custom fields added yet. Click "Add Field" to start building your form.
-                    </p>
-                  ) : (
-                    <div className="space-y-4">
-                      {customFields.map((field, index) => (
-                        <div key={index} className="flex flex-wrap gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                    <div className="space-y-2 ml-4">
+                      {section.fields.map((field: CustomField, fieldIndex: number) => (
+                        <div key={fieldIndex} className="flex flex-wrap gap-2 p-2 bg-white rounded border border-gray-200 items-center">
                           <select
                             value={field.type}
-                            onChange={(e) => updateCustomField(index, 'type', e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            onChange={(e) => updateFieldInSection(sectionIndex, fieldIndex, 'type', e.target.value)}
+                            className="px-2 py-1 border rounded text-sm"
                           >
                             <option value="text">Text</option>
                             <option value="number">Number</option>
                             <option value="email">Email</option>
                             <option value="textarea">Text Area</option>
-                            <option value="file">File Upload</option>
+                            <option value="file">File</option>
                           </select>
-
                           <input
                             type="text"
-                            placeholder="Field Label"
                             value={field.label}
-                            onChange={(e) => updateCustomField(index, 'label', e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            onChange={(e) => updateFieldInSection(sectionIndex, fieldIndex, 'label', e.target.value)}
+                            placeholder="Field Label"
+                            className="flex-1 px-2 py-1 border rounded text-sm min-w-[120px]"
                           />
-
                           <input
                             type="text"
-                            placeholder="Placeholder (optional)"
-                            value={field.placeholder}
-                            onChange={(e) => updateCustomField(index, 'placeholder', e.target.value)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                            value={field.placeholder || ''}
+                            onChange={(e) => updateFieldInSection(sectionIndex, fieldIndex, 'placeholder', e.target.value)}
+                            placeholder="Placeholder"
+                            className="flex-1 px-2 py-1 border rounded text-sm min-w-[100px]"
                           />
-
                           {field.type === 'number' && (
                             <input
                               type="number"
-                              placeholder="Max Value"
-                              value={field.max_value || ''}
-                              onChange={(e) => updateCustomField(index, 'max_value', parseFloat(e.target.value))}
-                              className="w-32 px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                              value={field.max_value ?? ''}
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                updateFieldInSection(sectionIndex, fieldIndex, 'max_value', val ? parseFloat(val) : null);
+                              }}
+                              placeholder="Max"
+                              className="w-16 px-2 py-1 border rounded text-sm"
                             />
                           )}
-
-                          <label className="flex items-center gap-2">
+                          <label className="flex items-center gap-1 text-sm whitespace-nowrap">
                             <input
                               type="checkbox"
                               checked={field.required}
-                              onChange={(e) => updateCustomField(index, 'required', e.target.checked)}
-                              className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                              onChange={(e) => updateFieldInSection(sectionIndex, fieldIndex, 'required', e.target.checked)}
+                              className="w-4 h-4"
                             />
-                            <span className="text-sm text-gray-700">Required</span>
+                            Required
                           </label>
-
                           <button
                             type="button"
-                            onClick={() => removeCustomField(index)}
-                            className="bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700 transition-colors"
+                            onClick={() => removeFieldFromSection(sectionIndex, fieldIndex)}
+                            className="text-red-500 hover:text-red-700 px-1"
                           >
-                            Remove
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       ))}
+                      <button
+                        type="button"
+                        onClick={() => addFieldToSection(sectionIndex)}
+                        className="text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 mt-1"
+                      >
+                        <Plus size={14} />
+                        Add Field to {section.title}
+                      </button>
                     </div>
-                  )}
-                </div>
-              )}
+                  </div>
+                ))}
+              </div>
 
               {/* Deadline & Status */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -656,12 +768,10 @@ export default function EditScholarshipPage() {
                     value={formData.deadline}
                     onChange={handleChange}
                     min={today}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
                     required
-                    disabled={loading}
                   />
                 </div>
-
                 <div>
                   <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
                     Status
@@ -671,8 +781,7 @@ export default function EditScholarshipPage() {
                     name="status"
                     value={formData.status}
                     onChange={handleChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                    disabled={loading}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
                   >
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
@@ -681,17 +790,15 @@ export default function EditScholarshipPage() {
               </div>
             </div>
           ) : activeTab === 'criteria' ? (
-            /* ============ CRITERIA TAB ============ */
             <div className="space-y-6">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
                 <h3 className="font-semibold text-blue-800 mb-2">How Scoring Works</h3>
                 <p className="text-sm text-blue-700">
                   Add criteria based on the form fields above. Each criterion gets a weight percentage.
-                  Total must equal 100%. Scores will be calculated automatically when you generate the merit list.
+                  Total must equal 100%.
                 </p>
               </div>
 
-              {/* Scoring Criteria List */}
               <div className="border-t pt-6">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900">Scoring Criteria</h3>
@@ -709,13 +816,12 @@ export default function EditScholarshipPage() {
                   <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
                     <Award size={40} className="mx-auto text-gray-400 mb-3" />
                     <p className="text-gray-500">No scoring criteria added yet.</p>
-                    <p className="text-sm text-gray-400">Click "Add Criterion" to define how scores are calculated.</p>
                   </div>
                 ) : (
                   <>
                     <div className="space-y-4 mb-4">
-                      {scoringCriteria.map((criterion, index) => {
-                        const availableFields = getAllFormFields();
+                      {scoringCriteria.map((criterion: ScoringCriterion, index: number) => {
+                        const allFields = getAllFormFields();
                         return (
                           <div key={criterion.id} className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
                             <div className="flex-1">
@@ -725,7 +831,7 @@ export default function EditScholarshipPage() {
                                 className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                               >
                                 <option value="">Select a field</option>
-                                {availableFields.map(field => (
+                                {allFields.map((field: FormFieldOption) => (
                                   <option key={field.name} value={field.name}>
                                     {field.label} ({field.type})
                                   </option>
@@ -761,15 +867,16 @@ export default function EditScholarshipPage() {
                       })}
                     </div>
 
-                    {/* Weight Total */}
-                    <div className={`p-4 rounded-lg ${totalWeight === 100
+                    <div className={`p-4 rounded-lg ${
+                      totalWeight === 100
                         ? 'bg-green-50 border border-green-200'
                         : 'bg-yellow-50 border border-yellow-200'
-                      }`}>
+                    }`}>
                       <div className="flex justify-between items-center">
                         <span className="font-medium">Total Weight:</span>
-                        <span className={`text-xl font-bold ${totalWeight === 100 ? 'text-green-700' : 'text-yellow-700'
-                          }`}>
+                        <span className={`text-xl font-bold ${
+                          totalWeight === 100 ? 'text-green-700' : 'text-yellow-700'
+                        }`}>
                           {totalWeight}%
                         </span>
                       </div>
@@ -779,33 +886,11 @@ export default function EditScholarshipPage() {
                         </p>
                       )}
                     </div>
-
-                    {/* Preview Section */}
-                    {scoringCriteria.length > 0 && totalWeight === 100 && (
-                      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-medium text-gray-900 mb-3">Score Calculation Preview</h4>
-                        <p className="text-sm text-gray-600">
-                          When you generate the merit list, each student's score will be calculated as:
-                        </p>
-                        <div className="mt-2 space-y-1 text-sm">
-                          {scoringCriteria.map((c, i) => (
-                            <div key={i} className="flex gap-2">
-                              <span className="text-blue-600">{c.fieldLabel}:</span>
-                              <span className="text-gray-700">(student's value × {c.weight}%)</span>
-                            </div>
-                          ))}
-                          <div className="border-t mt-2 pt-2 font-medium">
-                            Total = Sum of all weighted values
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </>
                 )}
               </div>
             </div>
           ) : (
-            /* ============ TIERS TAB (NEW) ============ */
             <div className="space-y-6">
               {formData.scholarship_mode !== 'tiered' ? (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
@@ -832,12 +917,11 @@ export default function EditScholarshipPage() {
 
                   {tiers.length === 0 ? (
                     <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-lg">
-                      <p className="text-gray-500">No tiers added yet. Click "Add Tier" to create scholarship categories.</p>
-                      <p className="text-sm text-gray-400 mt-1">Example: Gold (90-100%), Silver (75-89%), Bronze (60-74%)</p>
+                      <p className="text-gray-500">No tiers added yet.</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
-                      {tiers.map((tier, index) => (
+                      {tiers.map((tier: Tier, index: number) => (
                         <div key={tier.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
                           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
                             <div>
@@ -846,7 +930,7 @@ export default function EditScholarshipPage() {
                                 type="text"
                                 value={tier.tier_name}
                                 onChange={(e) => updateTier(index, 'tier_name', e.target.value)}
-                                placeholder="e.g., CAT-A, Gold"
+                                placeholder="e.g., Gold"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                               />
                             </div>
@@ -902,16 +986,11 @@ export default function EditScholarshipPage() {
                       ))}
                     </div>
                   )}
-                  <p className="text-sm text-gray-500 mt-3">
-                    Students will be automatically assigned to the tier matching their calculated percentage score.
-                    Make sure score ranges don't overlap.
-                  </p>
                 </>
               )}
             </div>
           )}
 
-          {/* Submit Button */}
           <div className="flex gap-4 pt-6 border-t border-gray-200 mt-6">
             <button
               type="button"

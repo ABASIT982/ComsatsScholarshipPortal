@@ -9,11 +9,11 @@ interface RecommendedScholarship {
   title: string
   description: string
   deadline: string
-  amount: string
   matchPercentage: number
   selectionProbability: number
   reason: string
   matchDetails: any
+  alreadyApplied?: boolean
 }
 
 export default function RecommendedScholarshipsPage() {
@@ -49,6 +49,10 @@ export default function RecommendedScholarshipsPage() {
   const getDaysRemaining = (deadline: string) => {
     const days = Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 3600 * 24))
     return days
+  }
+
+  const isExpired = (deadline: string) => {
+    return new Date(deadline) < new Date()
   }
 
   if (loading) {
@@ -91,19 +95,17 @@ export default function RecommendedScholarshipsPage() {
 
       {!loading && recommendations.length > 0 && (
         <div className="space-y-4">
-          {/* Stats summary */}
           <div className="bg-gray-50 rounded-lg p-3 flex justify-between items-center">
             <span className="text-sm text-gray-600">{recommendations.length} scholarships found</span>
             <span className="text-sm font-medium text-blue-600">Top match {recommendations[0]?.matchPercentage}%</span>
           </div>
 
-          {/* Recommendation cards */}
           {recommendations.map((scholarship) => {
             const daysLeft = getDaysRemaining(scholarship.deadline)
+            const expired = isExpired(scholarship.deadline)
 
             return (
               <div key={scholarship.id} className="bg-white rounded-lg shadow-sm border border-gray-100 p-5">
-                {/* Header */}
                 <div className="flex justify-between items-start mb-3">
                   <div>
                     <span className="inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mb-2">
@@ -111,25 +113,20 @@ export default function RecommendedScholarshipsPage() {
                     </span>
                     <h2 className="text-lg font-semibold text-gray-900">{scholarship.title}</h2>
                   </div>
-                  <div className="text-right text-sm text-gray-500">
+                  <div className="text-right text-sm">
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3.5 h-3.5" />
-                      <span>{daysLeft > 0 ? `${daysLeft} days left` : 'Expired'}</span>
+                      {expired ? (
+                        <span className="text-red-600 font-semibold">Expired</span>
+                      ) : (
+                        <span className="text-gray-500">{daysLeft} days left</span>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Description */}
                 <p className="text-gray-600 text-sm mb-3">{scholarship.description}</p>
 
-                {/* Amount */}
-                {scholarship.amount && (
-                  <div className="text-sm font-medium text-blue-600 mb-3">
-                    {scholarship.amount}
-                  </div>
-                )}
-
-                {/* Why recommended */}
                 <div className="bg-gray-50 rounded-lg p-3 mb-4">
                   <div className="flex items-center gap-1.5 mb-2">
                     <TrendingUp className="w-3.5 h-3.5 text-blue-500" />
@@ -137,7 +134,6 @@ export default function RecommendedScholarshipsPage() {
                   </div>
                   <p className="text-gray-600 text-xs">{scholarship.reason}</p>
                   
-                  {/* Match details */}
                   {scholarship.matchDetails && Object.keys(scholarship.matchDetails).length > 0 && (
                     <div className="mt-2 pt-2 border-t border-gray-200">
                       <div className="flex flex-wrap gap-3">
@@ -165,16 +161,29 @@ export default function RecommendedScholarshipsPage() {
                   >
                     View Details
                   </Link>
-                  <Link
-                    href={`/student/scholarships/${scholarship.id}/apply`}
-                    className={`flex-1 text-center px-3 py-2 rounded-lg text-sm font-medium ${
-                      daysLeft > 0
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed pointer-events-none'
-                    }`}
-                  >
-                    Apply Now
-                  </Link>
+                  
+                  {scholarship.alreadyApplied ? (
+                    <button
+                      disabled
+                      className="flex-1 text-center px-3 py-2 rounded-lg text-sm font-medium bg-gray-300 text-gray-500 cursor-not-allowed"
+                    >
+                      Already Applied
+                    </button>
+                  ) : expired ? (
+                    <button
+                      disabled
+                      className="flex-1 text-center px-3 py-2 rounded-lg text-sm font-medium bg-gray-300 text-gray-500 cursor-not-allowed"
+                    >
+                      Application Closed
+                    </button>
+                  ) : (
+                    <Link
+                      href={`/student/scholarships/${scholarship.id}/apply`}
+                      className="flex-1 text-center px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      Apply Now
+                    </Link>
+                  )}
                 </div>
               </div>
             )
