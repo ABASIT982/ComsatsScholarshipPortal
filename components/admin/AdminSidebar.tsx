@@ -12,13 +12,14 @@ import {
   FileText,
   Menu,
   X,
+  Archive,
   LogOut,
   ChevronDown,
   ChevronRight,
   Calculator,
   DollarSign,
   List,
-  AlertCircle        // ← ADD THIS
+  AlertCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuth } from '../../app/contexts/AuthContext'
@@ -51,7 +52,15 @@ const menuItems: (MenuItem | MenuItemWithSubmenu)[] = [
       { name: 'Student Reports', href: '/admin/students/reports', icon: FileText },
     ]
   },
-  { name: 'Scholarships', href: '/admin/scholarships', icon: Award },
+  { 
+    name: 'Scholarships', 
+    icon: Award,
+    submenu: [
+      { name: 'All Scholarships', href: '/admin/scholarships', icon: Award },
+      { name: 'Statistics', href: '/admin/scholarships/statistics', icon: BarChart3 },
+      { name: 'Archive', href: '/admin/scholarships/archive', icon: Archive },
+    ]
+  },
   { name: 'Applications', href: '/admin/applications', icon: FileText },
   {
     name: 'Merit Lists',
@@ -79,7 +88,6 @@ export function AdminSidebar() {
   }
 
   const isActive = (href: string) => pathname === href
-  const isMeritActive = pathname.startsWith('/admin/merit')
 
   const toggleDropdown = (menuName: string) => {
     setOpenDropdown(openDropdown === menuName ? null : menuName)
@@ -101,7 +109,7 @@ export function AdminSidebar() {
         isMobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
         
-        {/* Logo Section - Added margin top for mobile */}
+        {/* Logo Section */}
         <div className="flex items-center gap-4 px-6 py-6 border-b border-blue-700 shrink-0 mt-16 lg:mt-0">
           <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center p-1">
             <img src="/images/comsats.jpg" 
@@ -117,21 +125,20 @@ export function AdminSidebar() {
           </div>
         </div>
 
-        {/* Navigation - NO SCROLLBAR, kept all your original classes */}
+        {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-2">
           {menuItems.map((item) => {
             const Icon = item.icon
             
-            // Check if item has submenu using type guard
             if (hasSubmenu(item)) {
               return (
                 <div key={item.name}>
-                  {/* Dropdown button */}
+                  {/* Dropdown button - FIXED */}
                   <button
                     onClick={() => toggleDropdown(item.name)}
                     className={cn(
                       "flex items-center justify-between w-full px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 group hover:scale-[1.02]",
-                      isMeritActive
+                      openDropdown === item.name
                         ? "bg-white/20 text-white shadow-lg border border-white/30 backdrop-blur-sm"
                         : "text-blue-100 hover:bg-white/10 hover:text-white hover:shadow-md"
                     )}
@@ -139,7 +146,7 @@ export function AdminSidebar() {
                     <div className="flex items-center gap-4">
                       <Icon className={cn(
                         "w-5 h-5 transition-transform duration-200",
-                        isMeritActive ? "text-white" : "text-blue-300 group-hover:text-white"
+                        openDropdown === item.name ? "text-white" : "text-blue-300 group-hover:text-white"
                       )} />
                       <span className="font-semibold">{item.name}</span>
                     </div>
@@ -150,7 +157,7 @@ export function AdminSidebar() {
                     )}
                   </button>
                   
-                  {/* Dropdown Submenu - Only show when open */}
+                  {/* Dropdown Submenu */}
                   {openDropdown === item.name && (
                     <div className="ml-8 mt-1 space-y-1">
                       {item.submenu.map((subItem) => {
@@ -213,7 +220,7 @@ export function AdminSidebar() {
           })}
         </nav>
 
-        {/* Footer Actions - Fixed at bottom */}
+        {/* Footer Actions */}
         <div className="p-4 border-t border-blue-700 space-y-2 shrink-0">
           {/* Settings */}
           <Link
