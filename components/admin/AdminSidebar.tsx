@@ -43,7 +43,14 @@ function hasSubmenu(item: MenuItem | MenuItemWithSubmenu): item is MenuItemWithS
 
 const menuItems: (MenuItem | MenuItemWithSubmenu)[] = [
   { name: 'Dashboard', href: '/admin/dashboard', icon: LayoutDashboard },
-  { name: 'Students', href: '/admin/students', icon: Users },
+  { 
+    name: 'Students', 
+    icon: Users,
+    submenu: [
+      { name: 'All Students', href: '/admin/students', icon: Users },
+      { name: 'Student Reports', href: '/admin/students/reports', icon: FileText },
+    ]
+  },
   { name: 'Scholarships', href: '/admin/scholarships', icon: Award },
   { name: 'Applications', href: '/admin/applications', icon: FileText },
   {
