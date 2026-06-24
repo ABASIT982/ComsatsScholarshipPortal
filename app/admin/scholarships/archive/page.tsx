@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Archive, ArrowLeft, RefreshCw, Trash2, RotateCcw, Search, Award, X } from 'lucide-react'
 import Link from 'next/link'
-import toast from 'react-hot-toast'
+import toast, { Toaster } from 'react-hot-toast'
 
 export default function ScholarshipArchivePage() {
   const [archivedScholarships, setArchivedScholarships] = useState<any[]>([])
@@ -36,16 +36,76 @@ export default function ScholarshipArchivePage() {
       if (response.ok) {
         setArchivedScholarships(data.scholarships || [])
       } else {
-        toast.error(data.error || 'Failed to load archived scholarships')
+        toast.error(data.error || 'Failed to load archived scholarships', {
+          duration: 3000,
+          position: 'top-center',
+          style: {
+            background: '#fee2e2',
+            color: '#991b1b',
+            borderRadius: '8px',
+            padding: '10px 16px',
+          },
+        })
       }
     } catch (error) {
-      toast.error('Failed to load archived scholarships')
+      toast.error('Failed to load archived scholarships', {
+        duration: 3000,
+        position: 'top-center',
+        style: {
+          background: '#fee2e2',
+          color: '#991b1b',
+          borderRadius: '8px',
+          padding: '10px 16px',
+        },
+      })
     } finally {
       setLoading(false)
     }
   }
 
-  const handleRestore = async (id: string) => {
+  // Restore confirmation toast
+  const handleRestoreClick = (id: string, title: string) => {
+    toast.dismiss()
+    toast(
+      (t) => (
+        <div className="text-center">
+          <p className="font-semibold text-gray-800 mb-2">Restore Scholarship?</p>
+          <p className="text-sm text-gray-600 mb-1">{title}</p>
+          <p className="text-xs text-gray-500 mb-3">All applications and data will remain intact.</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id)
+                confirmRestore(id)
+              }}
+              className="px-4 py-1.5 bg-green-600 text-white rounded-lg text-sm hover:bg-green-700 min-w-[80px]"
+            >
+              Restore
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="px-4 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 min-w-[80px]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        duration: 6000,
+        position: 'top-center',
+        style: {
+          background: 'white',
+          padding: '16px',
+          borderRadius: '12px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          maxWidth: '320px',
+        },
+      }
+    )
+  }
+
+  const confirmRestore = async (id: string) => {
     setActionId(id)
     try {
       const response = await fetch(`/api/admin/scholarships/archive/${id}`, {
@@ -57,20 +117,91 @@ export default function ScholarshipArchivePage() {
       const data = await response.json()
       
       if (response.ok) {
-        toast.success(data.message || 'Scholarship restored successfully!')
+        toast.dismiss()
+        toast.success(data.message || 'Scholarship restored successfully!', {
+          duration: 3000,
+          position: 'top-center',
+          style: {
+            background: '#dcfce7',
+            color: '#166534',
+            borderRadius: '8px',
+            padding: '10px 16px',
+          },
+        })
         fetchArchived()
         setConfirmModal({ show: false, id: '', title: '', action: 'restore' })
       } else {
-        toast.error(data.error || 'Failed to restore')
+        toast.error(data.error || 'Failed to restore', {
+          duration: 3000,
+          position: 'top-center',
+          style: {
+            background: '#fee2e2',
+            color: '#991b1b',
+            borderRadius: '8px',
+            padding: '10px 16px',
+          },
+        })
       }
     } catch (error) {
-      toast.error('Error restoring scholarship')
+      toast.error('Error restoring scholarship', {
+        duration: 3000,
+        position: 'top-center',
+        style: {
+          background: '#fee2e2',
+          color: '#991b1b',
+          borderRadius: '8px',
+          padding: '10px 16px',
+        },
+      })
     } finally {
       setActionId(null)
     }
   }
 
-  const handleReset = async (id: string) => {
+  // Reset confirmation toast
+  const handleResetClick = (id: string, title: string) => {
+    toast.dismiss()
+    toast(
+      (t) => (
+        <div className="text-center">
+          <p className="font-semibold text-gray-800 mb-2">Reset Scholarship?</p>
+          <p className="text-sm text-gray-600 mb-1">{title}</p>
+          <p className="text-xs text-yellow-600 mb-1">All applications and merit lists will be deleted.</p>
+          <p className="text-xs text-green-600 mb-3">The scholarship will become active again.</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id)
+                confirmReset(id)
+              }}
+              className="px-4 py-1.5 bg-yellow-600 text-white rounded-lg text-sm hover:bg-yellow-700 min-w-[100px]"
+            >
+              Reset & Clear
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="px-4 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 min-w-[80px]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        duration: 6000,
+        position: 'top-center',
+        style: {
+          background: 'white',
+          padding: '16px',
+          borderRadius: '12px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          maxWidth: '340px',
+        },
+      }
+    )
+  }
+
+  const confirmReset = async (id: string) => {
     setActionId(id)
     try {
       const response = await fetch(`/api/admin/scholarships/archive/${id}`, {
@@ -82,20 +213,91 @@ export default function ScholarshipArchivePage() {
       const data = await response.json()
       
       if (response.ok) {
-        toast.success(data.message || 'Scholarship reset successfully! All applications cleared.')
+        toast.dismiss()
+        toast.success(data.message || 'Scholarship reset successfully! All applications cleared.', {
+          duration: 3000,
+          position: 'top-center',
+          style: {
+            background: '#dcfce7',
+            color: '#166534',
+            borderRadius: '8px',
+            padding: '10px 16px',
+          },
+        })
         fetchArchived()
         setConfirmModal({ show: false, id: '', title: '', action: 'reset' })
       } else {
-        toast.error(data.error || 'Failed to reset')
+        toast.error(data.error || 'Failed to reset', {
+          duration: 3000,
+          position: 'top-center',
+          style: {
+            background: '#fee2e2',
+            color: '#991b1b',
+            borderRadius: '8px',
+            padding: '10px 16px',
+          },
+        })
       }
     } catch (error) {
-      toast.error('Error resetting scholarship')
+      toast.error('Error resetting scholarship', {
+        duration: 3000,
+        position: 'top-center',
+        style: {
+          background: '#fee2e2',
+          color: '#991b1b',
+          borderRadius: '8px',
+          padding: '10px 16px',
+        },
+      })
     } finally {
       setActionId(null)
     }
   }
 
-  const handleDelete = async (id: string) => {
+  // Delete confirmation toast
+  const handleDeleteClick = (id: string, title: string) => {
+    toast.dismiss()
+    toast(
+      (t) => (
+        <div className="text-center">
+          <p className="font-bold text-red-600 mb-2">Delete Scholarship?</p>
+          <p className="text-sm text-gray-600 mb-1">{title}</p>
+          <p className="text-xs text-red-500 font-semibold mb-2">This action cannot be undone!</p>
+          <p className="text-xs text-gray-500 mb-4">All applications, merit lists, and tiers will be deleted.</p>
+          <div className="flex gap-3 justify-center">
+            <button
+              onClick={() => {
+                toast.dismiss(t.id)
+                confirmDelete(id)
+              }}
+              className="px-4 py-1.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700 min-w-[100px]"
+            >
+              Delete
+            </button>
+            <button
+              onClick={() => toast.dismiss(t.id)}
+              className="px-4 py-1.5 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 min-w-[80px]"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ),
+      {
+        duration: 8000,
+        position: 'top-center',
+        style: {
+          background: 'white',
+          padding: '20px',
+          borderRadius: '12px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          maxWidth: '340px',
+        },
+      }
+    )
+  }
+
+  const confirmDelete = async (id: string) => {
     setActionId(id)
     try {
       const response = await fetch(`/api/admin/scholarships/archive/${id}`, {
@@ -105,26 +307,45 @@ export default function ScholarshipArchivePage() {
       const data = await response.json()
       
       if (response.ok) {
-        toast.success(data.message || 'Scholarship permanently deleted')
+        toast.dismiss()
+        toast.success(data.message || 'Scholarship permanently deleted', {
+          duration: 4000,
+          position: 'top-center',
+          style: {
+            background: '#fee2e2',
+            color: '#991b1b',
+            borderRadius: '8px',
+            padding: '10px 16px',
+          },
+        })
         fetchArchived()
         setConfirmModal({ show: false, id: '', title: '', action: 'delete' })
       } else {
-        toast.error(data.error || 'Failed to delete')
+        toast.error(data.error || 'Failed to delete', {
+          duration: 3000,
+          position: 'top-center',
+          style: {
+            background: '#fee2e2',
+            color: '#991b1b',
+            borderRadius: '8px',
+            padding: '10px 16px',
+          },
+        })
       }
     } catch (error) {
-      toast.error('Error deleting scholarship')
+      toast.error('Error deleting scholarship', {
+        duration: 3000,
+        position: 'top-center',
+        style: {
+          background: '#fee2e2',
+          color: '#991b1b',
+          borderRadius: '8px',
+          padding: '10px 16px',
+        },
+      })
     } finally {
       setActionId(null)
     }
-  }
-
-  const openConfirmModal = (id: string, title: string, action: 'restore' | 'reset' | 'delete') => {
-    setConfirmModal({
-      show: true,
-      id,
-      title,
-      action
-    })
   }
 
   const getModalContent = (action: 'restore' | 'reset' | 'delete', title: string) => {
@@ -181,182 +402,152 @@ export default function ScholarshipArchivePage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Link href="/admin/scholarships" className="text-gray-600 hover:text-gray-900">
-            <ArrowLeft className="w-5 h-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Scholarship Archive</h1>
-            <p className="text-gray-500 text-sm">View, restore, reset, or permanently delete archived scholarships</p>
+    <>
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          duration: 3000,
+          style: {
+            borderRadius: '8px',
+            padding: '10px 16px',
+            fontSize: '14px',
+          },
+        }}
+      />
+      
+      <div className="p-6 max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Link href="/admin/scholarships" className="text-gray-600 hover:text-gray-900">
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Scholarship Archive</h1>
+              <p className="text-gray-500 text-sm">View, restore, reset, or permanently delete archived scholarships</p>
+            </div>
           </div>
+          <button
+            onClick={fetchArchived}
+            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </button>
         </div>
-        <button
-          onClick={fetchArchived}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
-      </div>
 
-      {/* Search */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="flex gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search archived scholarships..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
+        {/* Search */}
+        <div className="bg-white rounded-lg shadow p-4 mb-6">
+          <div className="flex gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search archived scholarships..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
             </div>
-          </div>
-          <div className="text-sm text-gray-500 flex items-center">
-            {filtered.length} found
-          </div>
-        </div>
-      </div>
-
-      {/* Archived List */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        {archivedScholarships.length === 0 ? (
-          <div className="text-center py-12">
-            <Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">No archived scholarships found</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Scholarships will appear here when they are expired or inactive
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Deadline</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Applications</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {filtered.map((sch: any) => {
-                  const isProcessingThis = actionId === sch.id
-                  
-                  return (
-                    <tr key={sch.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <Award className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm font-medium text-gray-900">{sch.title}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          new Date(sch.deadline) < new Date()
-                            ? 'bg-red-100 text-red-700'
-                            : sch.status === 'inactive'
-                            ? 'bg-yellow-100 text-yellow-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
-                          {new Date(sch.deadline) < new Date() ? 'Expired' : sch.status || 'N/A'}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center text-sm text-gray-500">
-                        {sch.deadline ? new Date(sch.deadline).toLocaleDateString() : 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 text-center text-sm text-gray-600">{sch.applications || 0}</td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => openConfirmModal(sch.id, sch.title, 'restore')}
-                            disabled={isProcessingThis}
-                            className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-xs"
-                            title="Restore - Keep all data"
-                          >
-                            <RotateCcw className="w-3 h-3" />
-                            Restore
-                          </button>
-                          
-                          <button
-                            onClick={() => openConfirmModal(sch.id, sch.title, 'reset')}
-                            disabled={isProcessingThis}
-                            className="flex items-center gap-1 px-2 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50 text-xs"
-                            title="Reset - Clear all applications"
-                          >
-                            <RefreshCw className="w-3 h-3" />
-                            Reset
-                          </button>
-                          
-                          <button
-                            onClick={() => openConfirmModal(sch.id, sch.title, 'delete')}
-                            disabled={isProcessingThis}
-                            className="flex items-center gap-1 px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-xs"
-                            title="Delete - Permanently remove"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-
-      {/* Confirmation Modal - Top Center Toast Style */}
-      {confirmModal.show && (
-        <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 pt-20">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 animate-in slide-in-from-top-5 duration-300">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                {getModalContent(confirmModal.action, confirmModal.title).title}
-              </h3>
-              <button
-                onClick={() => setConfirmModal({ show: false, id: '', title: '', action: 'restore' })}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="mb-6 text-gray-600">
-              {getModalContent(confirmModal.action, confirmModal.title).description}
-            </div>
-            
-            <div className="flex gap-3">
-              <button
-                onClick={() => setConfirmModal({ show: false, id: '', title: '', action: 'restore' })}
-                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  const action = confirmModal.action
-                  const id = confirmModal.id
-                  if (action === 'restore') handleRestore(id)
-                  else if (action === 'reset') handleReset(id)
-                  else if (action === 'delete') handleDelete(id)
-                }}
-                className={`flex-1 px-4 py-2 rounded-lg text-white ${getModalContent(confirmModal.action, confirmModal.title).confirmBg}`}
-              >
-                {getModalContent(confirmModal.action, confirmModal.title).confirmText}
-              </button>
+            <div className="text-sm text-gray-500 flex items-center">
+              {filtered.length} found
             </div>
           </div>
         </div>
-      )}
-    </div>
+
+        {/* Archived List */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {archivedScholarships.length === 0 ? (
+            <div className="text-center py-12">
+              <Archive className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">No archived scholarships found</p>
+              <p className="text-sm text-gray-400 mt-1">
+                Scholarships will appear here when they are expired or inactive
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-blue-600 text-white">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider rounded-tl-lg">Title</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">Deadline</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">Applications</th>
+                    <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider rounded-tr-lg">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filtered.map((sch: any) => {
+                    const isProcessingThis = actionId === sch.id
+                    
+                    return (
+                      <tr key={sch.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <Award className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm font-medium text-gray-900">{sch.title}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            new Date(sch.deadline) < new Date()
+                              ? 'bg-red-100 text-red-700'
+                              : sch.status === 'inactive'
+                              ? 'bg-yellow-100 text-yellow-700'
+                              : 'bg-gray-100 text-gray-700'
+                          }`}>
+                            {new Date(sch.deadline) < new Date() ? 'Expired' : sch.status || 'N/A'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
+                          {sch.deadline ? new Date(sch.deadline).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">{sch.applications || 0}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            <button
+                              onClick={() => handleRestoreClick(sch.id, sch.title)}
+                              disabled={isProcessingThis}
+                              className="flex items-center gap-1 px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50 text-xs"
+                              title="Restore - Keep all data"
+                            >
+                              <RotateCcw className="w-3 h-3" />
+                              Restore
+                            </button>
+                            
+                            <button
+                              onClick={() => handleResetClick(sch.id, sch.title)}
+                              disabled={isProcessingThis}
+                              className="flex items-center gap-1 px-2 py-1 bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50 text-xs"
+                              title="Reset - Clear all applications"
+                            >
+                              <RefreshCw className="w-3 h-3" />
+                              Reset
+                            </button>
+                            
+                            <button
+                              onClick={() => handleDeleteClick(sch.id, sch.title)}
+                              disabled={isProcessingThis}
+                              className="flex items-center gap-1 px-2 py-1 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-xs"
+                              title="Delete - Permanently remove"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
   )
 }

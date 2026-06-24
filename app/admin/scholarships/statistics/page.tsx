@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Award, Users, FileText, CheckCircle, Archive, XCircle, Clock, TrendingUp, Calendar, ArrowLeft } from 'lucide-react'
+import { Award, Users, FileText, CheckCircle, Archive, Clock, TrendingUp, Calendar, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 
 export default function ScholarshipStatisticsPage() {
@@ -75,6 +75,7 @@ export default function ScholarshipStatisticsPage() {
                     <p className="text-2xl font-bold mt-1">{stats?.archived || 0}</p>
                 </div>
             </div>
+
             {/* Application Stats */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                 <div className="bg-white rounded-lg shadow p-4">
@@ -107,41 +108,42 @@ export default function ScholarshipStatisticsPage() {
                 </div>
             </div>
 
-            {/* Scholarship Distribution Table */}
+            {/* Scholarship Distribution Table - with Rounded Corners */}
             <div className="bg-white rounded-lg shadow overflow-hidden">
-                <div className="px-6 py-4 border-b">
+                <div className="px-6 py-4 border-b border-gray-200">
                     <h2 className="font-semibold text-gray-900">Scholarship Distribution</h2>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="bg-gray-50">
+                        <thead className="bg-blue-600 text-white">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Scholarship</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Applications</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Approved</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Success Rate</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase">Deadline</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider rounded-tl-lg">Scholarship</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">Status</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">Applications</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">Approved</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider">Success Rate</th>
+                                <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider rounded-tr-lg">Deadline</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200">
+                        <tbody className="bg-white divide-y divide-gray-200">
                             {stats?.scholarships?.map((sch: any, idx: number) => (
-                                <tr key={idx} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{sch.title}</td>
-                                    <td className="px-6 py-4 text-center">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${sch.status === 'active' ? 'bg-green-100 text-green-700' :
-                                                sch.status === 'expired' ? 'bg-red-100 text-red-700' :
-                                                    'bg-gray-100 text-gray-700'
-                                            }`}>
+                                <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{sch.title}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                            sch.status === 'active' ? 'bg-green-100 text-green-700' :
+                                            sch.status === 'expired' ? 'bg-red-100 text-red-700' :
+                                            'bg-gray-100 text-gray-700'
+                                        }`}>
                                             {sch.status}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 text-center text-sm text-gray-600">{sch.applications}</td>
-                                    <td className="px-6 py-4 text-center text-sm text-gray-600">{sch.approved}</td>
-                                    <td className="px-6 py-4 text-center text-sm font-medium">
+                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">{sch.applications}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">{sch.approved}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                                         {sch.applications > 0 ? Math.round((sch.approved / sch.applications) * 100) : 0}%
                                     </td>
-                                    <td className="px-6 py-4 text-center text-sm text-gray-500">
+                                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
                                         {sch.deadline ? new Date(sch.deadline).toLocaleDateString() : 'N/A'}
                                     </td>
                                 </tr>
