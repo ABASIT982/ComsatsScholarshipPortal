@@ -70,6 +70,15 @@ const menuItems: (MenuItem | MenuItemWithSubmenu)[] = [
       { name: 'Reports', href: '/admin/merit/reports', icon: FileText },
     ]
   },
+  { 
+  name: 'Budget Management', 
+  icon: DollarSign,
+  submenu: [
+    { name: 'Approvals', href: '/admin/budget/approvals', icon: DollarSign },
+    { name: 'Overview', href: '/admin/budget/overview', icon: BarChart3 },
+    { name: 'Reports', href: '/admin/budget/reports', icon: FileText }, 
+  ]
+},
   { name: 'Notifications', href: '/admin/notifications', icon: Bell },
   { name: 'Reports', href: '/admin/reports', icon: FileText },
   { name: 'Manage Disputes', href: '/admin/disputes', icon: AlertCircle },  

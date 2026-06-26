@@ -423,31 +423,36 @@ export default function StudentMeritDetailPage() {
     a.click();
   };
 
-  const getStatusBadge = (status: string, isCurrentStudent: boolean) => {
-    const baseClass = "px-3 py-1 text-xs rounded-full font-medium w-fit";
+const getStatusBadge = (status: string, isCurrentStudent: boolean) => {
+  const baseClass = "px-3 py-1 text-xs rounded-full font-medium w-fit";
 
-    if (isCurrentStudent) {
-      switch (status) {
-        case 'selected':
-        case 'awarded':
-          return <span className={`${baseClass} bg-green-100 text-green-800 border border-green-500`}>Selected</span>;
-        case 'waitlist':
-          return <span className={`${baseClass} bg-yellow-100 text-yellow-800 border border-yellow-500`}>Waitlist</span>;
-        default:
-          return <span className={`${baseClass} bg-gray-100 text-gray-800 border border-gray-500`}>Pending</span>;
-      }
-    }
+  // Separate badge for Awarded status
+  if (status === 'awarded') {
+    return isCurrentStudent
+      ? <span className={`${baseClass} bg-purple-100 text-purple-800 border border-purple-500`}>Awarded</span>
+      : <span className={`${baseClass} bg-purple-100 text-purple-800`}>Awarded</span>;
+  }
 
+  if (isCurrentStudent) {
     switch (status) {
       case 'selected':
-      case 'awarded':
-        return <span className={`${baseClass} bg-green-100 text-green-800`}>Selected</span>;
+        return <span className={`${baseClass} bg-green-100 text-green-800 border border-green-500`}>Selected</span>;
       case 'waitlist':
-        return <span className={`${baseClass} bg-yellow-100 text-yellow-800`}>Waitlist</span>;
+        return <span className={`${baseClass} bg-yellow-100 text-yellow-800 border border-yellow-500`}>Waitlist</span>;
       default:
-        return <span className={`${baseClass} bg-gray-100 text-gray-800`}>Pending</span>;
+        return <span className={`${baseClass} bg-gray-100 text-gray-800 border border-gray-500`}>Pending</span>;
     }
-  };
+  }
+
+  switch (status) {
+    case 'selected':
+      return <span className={`${baseClass} bg-green-100 text-green-800`}>Selected</span>;
+    case 'waitlist':
+      return <span className={`${baseClass} bg-yellow-100 text-yellow-800`}>Waitlist</span>;
+    default:
+      return <span className={`${baseClass} bg-gray-100 text-gray-800`}>Pending</span>;
+  }
+}
 
   if (loading) {
     return (

@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { 
-  Download, 
-  FileText, 
-  BarChart3, 
+import {
+  Download,
+  FileText,
+  BarChart3,
   TrendingUp,
   Users,
   CheckCircle,
@@ -95,7 +95,7 @@ export default function MeritReportsPage() {
               .eq('scholarship_id', entry.scholarship_id)
               .eq('student_regno', entry.student_regno)
               .maybeSingle();
-            
+
             return {
               ...entry,
               student_name: appData?.application_data?.student_name || entry.student_regno
@@ -143,11 +143,11 @@ export default function MeritReportsPage() {
       month: 'long',
       day: 'numeric'
     });
-    
-    const scholarshipTitle = selectedScholarship === 'all' 
-      ? 'All Scholarships' 
+
+    const scholarshipTitle = selectedScholarship === 'all'
+      ? 'All Scholarships'
       : scholarships.find(s => s.id === selectedScholarship)?.title || '';
-    
+
     const isTieredScholarship = isTiered();
 
     const styles = `
@@ -204,7 +204,7 @@ export default function MeritReportsPage() {
       <th>Registration No</th>
       <th>Score</th>
     `;
-    
+
     if (isTieredScholarship) {
       tableHeaders += `<th>Awarded Tier</th><th>Benefit</th>`;
     }
@@ -217,7 +217,7 @@ export default function MeritReportsPage() {
         if (item.status === 'selected') statusClass = 'selected';
         else if (item.status === 'waitlist') statusClass = 'waitlist';
         else if (item.status === 'awarded') statusClass = 'awarded';
-        
+
         return `
           <tr>
             <td><b>${item.rank}</b></td>
@@ -236,7 +236,7 @@ export default function MeritReportsPage() {
         if (item.status === 'selected') statusClass = 'selected';
         else if (item.status === 'waitlist') statusClass = 'waitlist';
         else if (item.status === 'awarded') statusClass = 'awarded';
-        
+
         return `
           <tr>
             <td><b>${item.rank}</b></td>
@@ -320,49 +320,49 @@ export default function MeritReportsPage() {
         month: 'long',
         day: 'numeric'
       });
-      
-      const scholarshipTitle = selectedScholarship === 'all' 
-        ? 'All Scholarships' 
+
+      const scholarshipTitle = selectedScholarship === 'all'
+        ? 'All Scholarships'
         : scholarships.find(s => s.id === selectedScholarship)?.title || '';
-      
+
       const isTieredScholarship = isTiered();
-      
+
       const img = new Image();
       img.crossOrigin = "Anonymous";
       img.src = logoUrl;
-      
+
       img.onload = () => {
         doc.addImage(img, 'JPEG', 14, 10, 25, 25);
-        
+
         doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
         doc.text('COMSATS UNIVERSITY ISLAMABAD', 45, 22);
-        
+
         doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
         doc.text('ABBOTTABAD CAMPUS', 45, 30);
-        
+
         doc.setDrawColor(26, 82, 118);
         doc.setLineWidth(0.5);
         doc.line(14, 38, 200, 38);
-        
+
         doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(26, 82, 118);
         doc.text('MERIT LIST REPORT', 105, 55, { align: 'center' });
-        
+
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(0, 0, 0);
         doc.text(scholarshipTitle, 105, 70, { align: 'center' });
-        
+
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(100, 100, 100);
         doc.text(`Generated: ${currentDate}`, 105, 80, { align: 'center' });
-        
+
         let startY = 95;
-        
+
         if (stats) {
           autoTable(doc, {
             startY: startY,
@@ -381,7 +381,7 @@ export default function MeritReportsPage() {
           });
           startY = (doc as any).lastAutoTable.finalY + 10;
         }
-        
+
         let headers: string[] = ['Rank', 'Student Name', 'Reg No', 'Score', 'Status'];
         if (isTieredScholarship) {
           headers = ['Rank', 'Student Name', 'Reg No', 'Score', 'Awarded Tier', 'Benefit', 'Status'];
@@ -422,65 +422,65 @@ export default function MeritReportsPage() {
         const selectedCount = meritList.filter(m => m.status === 'selected' || m.status === 'awarded').length;
         const totalApplicants = meritList.length;
         const waitlistCount = meritList.filter(m => m.status === 'waitlist').length;
-        
+
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(0, 0, 0);
         doc.text(`Total Applicants: ${totalApplicants}`, 14, finalY);
         doc.text(`Total Selected: ${selectedCount}`, 80, finalY);
         doc.text(`Waitlist: ${waitlistCount}`, 160, finalY);
-        
+
         const signY = finalY + 20;
         doc.line(14, signY, 70, signY);
         doc.line(130, signY, 186, signY);
-        
+
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         doc.text('Registrar', 42, signY + 8, { align: 'center' });
         doc.text('Director', 158, signY + 8, { align: 'center' });
-        
+
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
         doc.text('COMSATS University Islamabad', 42, signY + 14, { align: 'center' });
         doc.text('Abbottabad Campus', 158, signY + 14, { align: 'center' });
-        
+
         doc.setFontSize(7);
         doc.setTextColor(128, 128, 128);
         doc.text('* This is a system generated document. No signature is required. *', 105, signY + 30, { align: 'center' });
-        
+
         doc.save(`merit-report-${Date.now()}.pdf`);
       };
-      
+
       img.onerror = () => {
         doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
         doc.text('COMSATS UNIVERSITY ISLAMABAD', 105, 22, { align: 'center' });
-        
+
         doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
         doc.text('ABBOTTABAD CAMPUS', 105, 30, { align: 'center' });
-        
+
         doc.setDrawColor(26, 82, 118);
         doc.setLineWidth(0.5);
         doc.line(14, 38, 200, 38);
-        
+
         doc.setFontSize(18);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(26, 82, 118);
         doc.text('MERIT LIST REPORT', 105, 55, { align: 'center' });
-        
+
         doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
         doc.setTextColor(0, 0, 0);
         doc.text(scholarshipTitle, 105, 70, { align: 'center' });
-        
+
         doc.setFontSize(9);
         doc.setFont('helvetica', 'normal');
         doc.setTextColor(100, 100, 100);
         doc.text(`Generated: ${currentDate}`, 105, 80, { align: 'center' });
-        
+
         let startY = 95;
-        
+
         if (stats) {
           autoTable(doc, {
             startY: startY,
@@ -498,7 +498,7 @@ export default function MeritReportsPage() {
           });
           startY = (doc as any).lastAutoTable.finalY + 10;
         }
-        
+
         let headers: string[] = ['Rank', 'Student Name', 'Reg No', 'Score', 'Status'];
         if (isTieredScholarship) {
           headers = ['Rank', 'Student Name', 'Reg No', 'Score', 'Awarded Tier', 'Benefit', 'Status'];
@@ -538,30 +538,30 @@ export default function MeritReportsPage() {
         const selectedCount = meritList.filter(m => m.status === 'selected' || m.status === 'awarded').length;
         const totalApplicants = meritList.length;
         const waitlistCount = meritList.filter(m => m.status === 'waitlist').length;
-        
+
         doc.setFontSize(9);
         doc.text(`Total Applicants: ${totalApplicants}`, 14, finalY);
         doc.text(`Total Selected: ${selectedCount}`, 80, finalY);
         doc.text(`Waitlist: ${waitlistCount}`, 160, finalY);
-        
+
         const signY = finalY + 20;
         doc.line(14, signY, 70, signY);
         doc.line(130, signY, 186, signY);
-        
+
         doc.setFontSize(9);
         doc.setFont('helvetica', 'bold');
         doc.text('Registrar', 42, signY + 8, { align: 'center' });
         doc.text('Director', 158, signY + 8, { align: 'center' });
-        
+
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
         doc.text('COMSATS University Islamabad', 42, signY + 14, { align: 'center' });
         doc.text('Abbottabad Campus', 158, signY + 14, { align: 'center' });
-        
+
         doc.setFontSize(7);
         doc.setTextColor(128, 128, 128);
         doc.text('* This is a system generated document. No signature is required. *', 105, signY + 30, { align: 'center' });
-        
+
         doc.save(`merit-report-${Date.now()}.pdf`);
       };
     } catch (error) {
@@ -573,7 +573,7 @@ export default function MeritReportsPage() {
   const downloadCSV = () => {
     try {
       const isTieredScholarship = isTiered();
-      
+
       let headers: string[] = ['Rank', 'Student Name', 'Reg No', 'Score', 'Status'];
       if (isTieredScholarship) {
         headers = ['Rank', 'Student Name', 'Reg No', 'Score', 'Awarded Tier', 'Benefit', 'Status'];
@@ -733,19 +733,19 @@ export default function MeritReportsPage() {
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-blue-600 text-white">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Rank</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Student Name</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Reg No</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Score</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider rounded-tl-lg">Rank</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Student Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Reg No</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Score</th>
                       {isTieredScholarship && (
                         <>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Awarded Tier</th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Benefit</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Awarded Tier</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Benefit</th>
                         </>
                       )}
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider rounded-tr-lg">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
@@ -764,11 +764,10 @@ export default function MeritReportsPage() {
                           </>
                         )}
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            entry.status === 'selected' || entry.status === 'awarded' ? 'bg-green-100 text-green-800' :
-                            entry.status === 'waitlist' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-gray-100 text-gray-800'
-                          }`}>
+                          <span className={`px-2 py-1 text-xs rounded-full ${entry.status === 'selected' || entry.status === 'awarded' ? 'bg-green-100 text-green-800' :
+                              entry.status === 'waitlist' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-gray-100 text-gray-800'
+                            }`}>
                             {entry.status}
                           </span>
                         </td>

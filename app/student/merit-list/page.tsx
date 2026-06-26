@@ -142,19 +142,20 @@ const downloadMeritList = async (scholarshipId: string, title: string) => {
     router.push('/student/login');
   };
 
-  const getStatusBadge = (status: string) => {
-    const baseClass = "px-3 py-1 text-xs rounded-full font-medium flex items-center gap-1 w-fit";
-    
-    switch(status) {
-      case 'selected':
-      case 'awarded':
-        return <span className={`${baseClass} bg-green-100 text-green-800`}><CheckCircle size={12} /> Selected</span>;
-      case 'waitlist':
-        return <span className={`${baseClass} bg-yellow-100 text-yellow-800`}><Clock size={12} /> Waitlist</span>;
-      default:
-        return <span className={`${baseClass} bg-gray-100 text-gray-800`}>Pending</span>;
-    }
-  };
+const getStatusBadge = (status: string) => {
+  const baseClass = "px-3 py-1 text-xs rounded-full font-medium flex items-center gap-1 w-fit";
+  
+  switch(status) {
+    case 'awarded':
+      return <span className={`${baseClass} bg-purple-100 text-purple-800`}><Award size={12} /> Awarded</span>;
+    case 'selected':
+      return <span className={`${baseClass} bg-green-100 text-green-800`}><CheckCircle size={12} /> Selected</span>;
+    case 'waitlist':
+      return <span className={`${baseClass} bg-yellow-100 text-yellow-800`}><Clock size={12} /> Waitlist</span>;
+    default:
+      return <span className={`${baseClass} bg-gray-100 text-gray-800`}>Pending</span>;
+  }
+}
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {

@@ -82,27 +82,31 @@ export default function StudentApplicationsPage() {
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 'rejected':
-        return <XCircle className="w-5 h-5 text-red-500" />;
-      default:
-        return <Clock4 className="w-5 h-5 text-yellow-500" />;
-    }
-  };
+const getStatusIcon = (status: string) => {
+  switch (status) {
+    case 'approved':
+      return <CheckCircle className="w-5 h-5 text-green-500" />;
+    case 'awarded':
+      return <CheckCircle className="w-5 h-5 text-purple-500" />;
+    case 'rejected':
+      return <XCircle className="w-5 h-5 text-red-500" />;
+    default:
+      return <Clock4 className="w-5 h-5 text-yellow-500" />;
+  }
+}
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-yellow-100 text-yellow-800';
-    }
-  };
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'approved':
+      return 'bg-green-100 text-green-800';
+    case 'awarded':
+      return 'bg-purple-100 text-purple-800';
+    case 'rejected':
+      return 'bg-red-100 text-red-800';
+    default:
+      return 'bg-yellow-100 text-yellow-800';
+  }
+}
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {

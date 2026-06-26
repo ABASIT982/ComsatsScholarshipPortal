@@ -159,7 +159,9 @@ export async function PUT(
       scoring_criteria,
       number_of_awards,
       scholarship_mode,
-      tiers
+      tiers,
+      budget_allocated,     // ADDED
+      budget_status         // ADDED
     } = await request.json();
 
     console.log('✏️ [API] Updating scholarship:', id);
@@ -192,7 +194,9 @@ export async function PUT(
       scoring_criteria: scoring_criteria || [],
       number_of_awards: number_of_awards || 0,
       scholarship_mode: scholarship_mode || 'single',
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      budget_allocated: budget_allocated || 0,     // ADDED
+      budget_status: budget_status || 'pending'    // ADDED
     };
 
     const { data: scholarship, error } = await supabase
@@ -258,7 +262,7 @@ export async function PUT(
         .delete()
         .eq('scholarship_id', id);
 
-      // Insert new tiers
+      // Insert new tiers with numeric amount
       const tierData = tiers.map((tier: any, index: number) => ({
         scholarship_id: id,
         tier_name: tier.tier_name,
@@ -266,6 +270,7 @@ export async function PUT(
         max_score: tier.max_score,
         award_description: tier.award_description,
         award_amount: tier.award_amount,
+        award_amount_numeric: tier.award_amount_numeric || 0,  // ADDED
         tier_order: index
       }));
 

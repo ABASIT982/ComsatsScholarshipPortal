@@ -26,6 +26,7 @@ type Tier = {
   max_score: number;
   award_description: string;
   award_amount: string;
+  award_amount_numeric?: number; // ADDED
 };
 
 export default function CreateScholarshipPage() {
@@ -40,6 +41,11 @@ export default function CreateScholarshipPage() {
     status: 'active',
     student_types: ['undergraduate'],
     number_of_awards: 0
+  });
+
+  // ADDED: Budget state
+  const [budgetData, setBudgetData] = useState({
+    award_amount: '',
   });
 
   const [sections, setSections] = useState<FormSection[]>([
@@ -168,7 +174,8 @@ export default function CreateScholarshipPage() {
       min_score: 0,
       max_score: 100,
       award_description: '',
-      award_amount: ''
+      award_amount: '',
+      award_amount_numeric: 0 // ADDED
     }]);
   };
 
@@ -180,6 +187,17 @@ export default function CreateScholarshipPage() {
 
   const removeTier = (index: number): void => {
     setTiers(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Calculate total budget
+  const calculateTotalBudget = (): number => {
+    if (scholarshipMode === 'single') {
+      const numAwards = parseInt(formData.number_of_awards.toString()) || 0;
+      const awardAmount = parseInt(budgetData.award_amount) || 0;
+      return numAwards * awardAmount;
+    } else {
+      return tiers.reduce((sum, tier) => sum + (tier.award_amount_numeric || 0), 0);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
@@ -199,10 +217,26 @@ export default function CreateScholarshipPage() {
       return;
     }
 
-    if (scholarshipMode === 'tiered' && tiers.length === 0) {
-      toast.error('Please add at least one tier');
+    // Single mode: Award amount required
+    if (scholarshipMode === 'single' && (!budgetData.award_amount || parseInt(budgetData.award_amount) <= 0)) {
+      toast.error('Award amount per student is required');
       setLoading(false);
       return;
+    }
+
+    // Tiered mode: Each tier must have numeric amount
+    if (scholarshipMode === 'tiered') {
+      if (tiers.length === 0) {
+        toast.error('Please add at least one tier');
+        setLoading(false);
+        return;
+      }
+      const missingAmount = tiers.some(t => !t.award_amount_numeric || t.award_amount_numeric <= 0);
+      if (missingAmount) {
+        toast.error('Please set numeric amount for all tiers');
+        setLoading(false);
+        return;
+      }
     }
 
     const deadlineDate = new Date(formData.deadline);
@@ -228,6 +262,8 @@ export default function CreateScholarshipPage() {
       return;
     }
 
+    const totalBudget = calculateTotalBudget();
+
     const submissionData = {
       title: formData.title,
       description: formData.description,
@@ -237,7 +273,10 @@ export default function CreateScholarshipPage() {
       form_sections: sections,
       number_of_awards: scholarshipMode === 'single' ? formData.number_of_awards : 0,
       scholarship_mode: scholarshipMode,
-      tiers: scholarshipMode === 'tiered' ? tiers : []
+      tiers: scholarshipMode === 'tiered' ? tiers : [],
+      budget_allocated: totalBudget,
+      award_amount: scholarshipMode === 'single' ? parseInt(budgetData.award_amount) : 0,
+      budget_status: 'pending' // ADDED
     };
 
     try {
@@ -279,6 +318,8 @@ export default function CreateScholarshipPage() {
   };
 
   const today = new Date().toISOString().split('T')[0];
+
+  const totalBudget = calculateTotalBudget();
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
@@ -388,23 +429,42 @@ export default function CreateScholarshipPage() {
               </div>
             </div>
 
+            {/* Single Mode Fields */}
             {scholarshipMode === 'single' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Number of Awards *</label>
-                <input
-                  type="number"
-                  name="number_of_awards"
-                  value={formData.number_of_awards}
-                  onChange={handleChange}
-                  min="1"
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-                  placeholder="How many students will get this scholarship?"
-                  required
-                />
-                <p className="text-sm text-gray-500 mt-1">Top N students will be selected</p>
-              </div>
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Number of Awards *</label>
+                  <input
+                    type="number"
+                    name="number_of_awards"
+                    value={formData.number_of_awards}
+                    onChange={handleChange}
+                    min="1"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                    placeholder="How many students will get this scholarship?"
+                    required
+                  />
+                  <p className="text-sm text-gray-500 mt-1">Top N students will be selected</p>
+                </div>
+
+                {/* NEW: Award Amount per Student */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Award Amount per Student *</label>
+                  <input
+                    type="number"
+                    name="award_amount"
+                    value={budgetData.award_amount}
+                    onChange={(e) => setBudgetData({ ...budgetData, award_amount: e.target.value })}
+                    min="1"
+                    placeholder="e.g., 50000"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                    required
+                  />
+                </div>
+              </>
             )}
 
+            {/* Tiered Mode Fields */}
             {scholarshipMode === 'tiered' && (
               <div className="border rounded-lg p-4">
                 <div className="flex items-center justify-between mb-4">
@@ -431,7 +491,7 @@ export default function CreateScholarshipPage() {
                   <div className="space-y-4">
                     {tiers.map((tier, index) => (
                       <div key={tier.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1">Tier Name</label>
                             <input
@@ -473,12 +533,27 @@ export default function CreateScholarshipPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Award Amount</label>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Display Amount</label>
                             <input
                               type="text"
                               value={tier.award_amount}
                               onChange={(e) => updateTier(index, 'award_amount', e.target.value)}
                               placeholder="e.g., 75% or Rs.40,000"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                            />
+                          </div>
+                          {/* NEW: Numeric Amount Field */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Amount (Numeric)</label>
+                            <input
+                              type="number"
+                              value={tier.award_amount_numeric || ''}
+                              onChange={(e) => {
+                                const updated = [...tiers];
+                                updated[index] = { ...updated[index], award_amount_numeric: parseFloat(e.target.value) || 0 };
+                                setTiers(updated);
+                              }}
+                              placeholder="e.g., 50000"
                               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                             />
                           </div>
@@ -500,6 +575,28 @@ export default function CreateScholarshipPage() {
                 </p>
               </div>
             )}
+
+            {/* Budget Summary */}
+            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+              <h4 className="font-semibold text-gray-700 mb-2">Budget Summary</h4>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-gray-600">Total Budget Required:</span>
+                <span className="text-xl font-bold text-blue-600">Rs. {totalBudget.toLocaleString()}</span>
+              </div>
+              {scholarshipMode === 'single' && formData.number_of_awards > 0 && budgetData.award_amount && (
+                <div className="text-sm text-gray-500 mt-1">
+                  {formData.number_of_awards} students × Rs. {parseInt(budgetData.award_amount).toLocaleString()} = Rs. {totalBudget.toLocaleString()}
+                </div>
+              )}
+              {scholarshipMode === 'tiered' && tiers.length > 0 && (
+                <div className="text-sm text-gray-500 mt-1">
+                  {tiers.filter(t => t.award_amount_numeric && t.award_amount_numeric > 0).length} tiers with amounts
+                </div>
+              )}
+              {totalBudget > 0 && (
+                <p className="text-xs text-gray-400 mt-2">Budget will be pending approval after merit list generation</p>
+              )}
+            </div>
 
             {/* Form Sections (Tabs) */}
             <div className="border-t pt-6">

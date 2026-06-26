@@ -6,6 +6,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
+
 // Generate verification code for selected students
 function generateVerificationCode(studentRegno: string, rank: number) {
   const random = Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // ✅ FIX: Skip number_of_awards check for tiered mode
+    // Skip number_of_awards check for tiered mode
     if (scholarship.scholarship_mode !== 'tiered') {
       if (!scholarship.number_of_awards || scholarship.number_of_awards <= 0) {
         return NextResponse.json(
@@ -84,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`📊 [MERIT API] Found ${applications.length} approved applications`);
 
-    // ✅ NEW: Get tiers for tiered mode
+    // Get tiers for tiered mode
     let scholarshipTiers = [];
     if (scholarship.scholarship_mode === 'tiered') {
       const { data: tierData } = await supabase
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
     const criteria = scholarship.scoring_criteria;
     const scoredApplications = [];
 
-    // FIRST PASS: Calculate raw scores (convert everything to percentage first)
+    // FIRST PASS: Calculate raw scores
     for (const app of applications) {
       const applicationData = app.application_data || {};
       let totalPercentageScore = 0;
@@ -124,7 +125,6 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // Convert each field to percentage
         let percentageValue = 0;
         const fieldNameLower = criterion.fieldName?.toLowerCase() || '';
         const fieldLabelLower = criterion.fieldLabel?.toLowerCase() || '';
@@ -134,12 +134,8 @@ export async function POST(request: NextRequest) {
           fieldLabelLower.includes('cgpa') ||
           (fieldValue <= 4.33 && fieldValue > 0);
 
-        const isPercentage = fieldValue <= 100 && fieldValue > 0 && !isGPA;
-
         if (isGPA) {
           percentageValue = (fieldValue / 4.0) * 100;
-        } else if (isPercentage) {
-          percentageValue = fieldValue;
         } else {
           percentageValue = fieldValue;
         }
@@ -177,14 +173,13 @@ export async function POST(request: NextRequest) {
     // Sort by total score
     normalizedApplications.sort((a, b) => b.total_score - a.total_score);
 
-    // ✅ Generate merit entries with tier support
+    // Generate merit entries with tier support
     const meritEntries = normalizedApplications.map((app, index) => {
       let status = 'waitlist';
       let awardTier = null;
       let awardDescription = null;
 
       if (scholarship.scholarship_mode === 'tiered') {
-        // Find matching tier based on score
         const matchedTier = scholarshipTiers.find(tier =>
           app.total_score >= tier.min_score && app.total_score <= tier.max_score
         );
@@ -202,7 +197,6 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Generate verification code ONLY for selected students
       let verificationCode = null;
       if (status === 'selected') {
         verificationCode = generateVerificationCode(app.student_regno, index + 1);
@@ -217,7 +211,7 @@ export async function POST(request: NextRequest) {
         status: status,
         award_tier: awardTier,
         award_description: awardDescription,
-        verification_code: verificationCode,  
+        verification_code: verificationCode,
         score_breakdown: app.breakdown,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -227,6 +221,28 @@ export async function POST(request: NextRequest) {
     console.log(`📈 [MERIT API] Max raw score: ${maxRawScore}`);
     console.log(`📈 [MERIT API] Mode: ${scholarship.scholarship_mode}`);
     console.log(`📈 [MERIT API] Selected: ${meritEntries.filter(m => m.status === 'selected').length}`);
+
+    // ========== BUDGET CALCULATION ==========
+    let totalBudgetRequired = 0;
+    const selectedEntries = meritEntries.filter(m => m.status === 'selected');
+
+    if (scholarship.scholarship_mode === 'single') {
+      // Single mode: number_of_awards × award_amount
+      const awardAmount = scholarship.award_amount || scholarship.budget_allocated / scholarship.number_of_awards || 0;
+      totalBudgetRequired = selectedEntries.length * awardAmount;
+    } else if (scholarship.scholarship_mode === 'tiered') {
+      // Tiered mode: sum of award_amount_numeric for each selected student's tier
+      for (const entry of selectedEntries) {
+        const matchedTier = scholarshipTiers.find(tier =>
+          entry.total_score >= tier.min_score && entry.total_score <= tier.max_score
+        );
+        if (matchedTier) {
+          totalBudgetRequired += matchedTier.award_amount_numeric || 0;
+        }
+      }
+    }
+
+    console.log(`💰 [MERIT API] Total Budget Required: ${totalBudgetRequired}`);
 
     // Delete old merit list
     const { error: deleteError } = await supabase
@@ -251,11 +267,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update scholarship to mark merit list as generated
+    // Update scholarship to mark merit list as generated and set budget data
     await supabase
       .from('scholarships')
       .update({
         merit_list_generated: true,
+        budget_required: totalBudgetRequired,
+        budget_status: 'pending',
         updated_at: new Date().toISOString()
       })
       .eq('id', scholarshipId);
@@ -319,8 +337,6 @@ export async function POST(request: NextRequest) {
             student_name: studentName,
             scholarship_title: scholarship.title,
             rank: student.rank,
-            // award_tier: student.award_tier,
-            // award_description: student.award_description
           });
           console.log(`✅ Email sent to ${studentEmail}`);
         }
@@ -331,15 +347,17 @@ export async function POST(request: NextRequest) {
       console.error('❌ Email error:', emailError);
     }
 
-    // Return summary
+    // Return summary with budget info
     return NextResponse.json({
       success: true,
       message: 'Merit list generated successfully',
       summary: {
         total_applications: applications.length,
-        selected_count: meritEntries.filter(m => m.status === 'selected').length,
+        selected_count: selectedEntries.length,
         mode: scholarship.scholarship_mode,
         top_score: normalizedApplications[0]?.total_score || 0,
+        total_budget_required: totalBudgetRequired,
+        budget_status: 'pending'
       },
       merit_list: meritEntries.map(entry => ({
         rank: entry.rank,

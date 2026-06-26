@@ -35,6 +35,7 @@ type Tier = {
   max_score: number;
   award_description: string;
   award_amount: string;
+  award_amount_numeric?: number;  // ADDED
 };
 
 type FormFieldOption = {
@@ -63,6 +64,11 @@ export default function EditScholarshipPage() {
     student_types: ['undergraduate'],
     number_of_awards: 0,
     scholarship_mode: 'single'
+  });
+
+  // ADDED: Budget state
+  const [budgetData, setBudgetData] = useState({
+    award_amount: 0,
   });
 
   const [sections, setSections] = useState<FormSection[]>([]);
@@ -104,6 +110,13 @@ const fetchScholarship = async () => {
         number_of_awards: data.scholarship.number_of_awards || 0,
         scholarship_mode: data.scholarship.scholarship_mode || 'single'
       });
+
+      // Load budget data for single mode
+      if (data.scholarship.scholarship_mode === 'single' && data.scholarship.budget_allocated && data.scholarship.number_of_awards > 0) {
+        setBudgetData({
+          award_amount: data.scholarship.budget_allocated / data.scholarship.number_of_awards
+        });
+      }
 
       // Load sections
       let loadedSections: FormSection[] = [];
@@ -307,7 +320,8 @@ const fetchScholarship = async () => {
       min_score: 0,
       max_score: 100,
       award_description: '',
-      award_amount: ''
+      award_amount: '',
+      award_amount_numeric: 0  // ADDED
     }]);
   };
 
@@ -338,6 +352,15 @@ const fetchScholarship = async () => {
     });
   };
 
+  // Calculate total budget
+  const calculateTotalBudget = (): number => {
+    if (formData.scholarship_mode === 'single') {
+      return (formData.number_of_awards || 0) * (budgetData.award_amount || 0);
+    } else {
+      return tiers.reduce((sum, tier) => sum + (tier.award_amount_numeric || 0), 0);
+    }
+  };
+
   // ========== SUBMIT ==========
 
   const handleSubmit = async (e: React.FormEvent): Promise<void> => {
@@ -350,6 +373,28 @@ const fetchScholarship = async () => {
       setError('Please fill in all required fields');
       setLoading(false);
       return;
+    }
+
+    // Single mode: Award amount required
+    if (formData.scholarship_mode === 'single' && (!budgetData.award_amount || budgetData.award_amount <= 0)) {
+      setError('Award amount per student is required');
+      setLoading(false);
+      return;
+    }
+
+    // Tiered mode: Each tier must have numeric amount
+    if (formData.scholarship_mode === 'tiered') {
+      if (tiers.length === 0) {
+        setError('Please add at least one tier');
+        setLoading(false);
+        return;
+      }
+      const missingAmount = tiers.some(t => !t.award_amount_numeric || t.award_amount_numeric <= 0);
+      if (missingAmount) {
+        setError('Please set numeric amount for all tiers');
+        setLoading(false);
+        return;
+      }
     }
 
     const hasEmptySection = sections.some((section: FormSection) => section.fields.length === 0);
@@ -401,6 +446,8 @@ const fetchScholarship = async () => {
       }))
     }));
 
+    const totalBudget = calculateTotalBudget();
+
     const submissionData = {
       id: scholarshipId,
       title: formData.title,
@@ -412,13 +459,15 @@ const fetchScholarship = async () => {
       scoring_criteria: scoringCriteria,
       number_of_awards: formData.scholarship_mode === 'single' ? formData.number_of_awards : 0,
       scholarship_mode: formData.scholarship_mode,
-      tiers: tiers  // 🔥 Save tiers
+      tiers: tiers,
+      budget_allocated: totalBudget,
+      budget_status: 'pending'
     };
 
-    console.log('📤 Submitting tiers:', tiers);
+    console.log('📤 Submitting budget:', totalBudget);
 
     try {
-      const response = await fetch(`/api/scholarships?id=${scholarshipId}`, {
+      const response = await fetch(`/api/scholarships/${scholarshipId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(submissionData),
@@ -444,6 +493,7 @@ const fetchScholarship = async () => {
   };
 
   const today = new Date().toISOString().split('T')[0];
+  const totalBudget = calculateTotalBudget();
 
   if (fetchLoading) {
     return (
@@ -544,21 +594,38 @@ const fetchScholarship = async () => {
               </div>
 
               {formData.scholarship_mode === 'single' && (
-                <div>
-                  <label htmlFor="number_of_awards" className="block text-sm font-medium text-gray-700 mb-2">
-                    Number of Scholarships to Award *
-                  </label>
-                  <input
-                    type="number"
-                    id="number_of_awards"
-                    name="number_of_awards"
-                    value={formData.number_of_awards}
-                    onChange={handleChange}
-                    min="1"
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg"
-                    required
-                  />
-                </div>
+                <>
+                  <div>
+                    <label htmlFor="number_of_awards" className="block text-sm font-medium text-gray-700 mb-2">
+                      Number of Scholarships to Award *
+                    </label>
+                    <input
+                      type="number"
+                      id="number_of_awards"
+                      name="number_of_awards"
+                      value={formData.number_of_awards}
+                      onChange={handleChange}
+                      min="1"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                      required
+                    />
+                  </div>
+                  {/* ADDED: Award Amount per Student */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Award Amount per Student *
+                    </label>
+                    <input
+                      type="number"
+                      value={budgetData.award_amount}
+                      onChange={(e) => setBudgetData({ ...budgetData, award_amount: parseInt(e.target.value) || 0 })}
+                      min="1"
+                      placeholder="e.g., 50000"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg"
+                      required
+                    />
+                  </div>
+                </>
               )}
 
               <div>
@@ -755,6 +822,26 @@ const fetchScholarship = async () => {
                 ))}
               </div>
 
+              {/* Budget Summary */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <h4 className="font-semibold text-gray-700 mb-2">Budget Summary</h4>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Total Budget Required:</span>
+                  <span className="text-xl font-bold text-blue-600">Rs. {totalBudget.toLocaleString()}</span>
+                </div>
+                {formData.scholarship_mode === 'single' && formData.number_of_awards > 0 && budgetData.award_amount > 0 && (
+                  <div className="text-sm text-gray-500 mt-1">
+                    {formData.number_of_awards} students × Rs. {budgetData.award_amount.toLocaleString()} = Rs. {totalBudget.toLocaleString()}
+                  </div>
+                )}
+                {formData.scholarship_mode === 'tiered' && tiers.length > 0 && (
+                  <div className="text-sm text-gray-500 mt-1">
+                    {tiers.filter(t => t.award_amount_numeric && t.award_amount_numeric > 0).length} tiers with amounts
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-2">Budget will be pending approval after merit list generation</p>
+              </div>
+
               {/* Deadline & Status */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -923,7 +1010,7 @@ const fetchScholarship = async () => {
                     <div className="space-y-4">
                       {tiers.map((tier: Tier, index: number) => (
                         <div key={tier.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                          <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">Tier Name</label>
                               <input
@@ -971,6 +1058,21 @@ const fetchScholarship = async () => {
                                 value={tier.award_amount}
                                 onChange={(e) => updateTier(index, 'award_amount', e.target.value)}
                                 placeholder="e.g., 75% or Rs.40,000"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                              />
+                            </div>
+                            {/* ADDED: Numeric Amount */}
+                            <div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">Amount (Numeric)</label>
+                              <input
+                                type="number"
+                                value={tier.award_amount_numeric || ''}
+                                onChange={(e) => {
+                                  const updated = [...tiers];
+                                  updated[index] = { ...updated[index], award_amount_numeric: parseFloat(e.target.value) || 0 };
+                                  setTiers(updated);
+                                }}
+                                placeholder="e.g., 50000"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                               />
                             </div>

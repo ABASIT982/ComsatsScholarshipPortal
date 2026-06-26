@@ -60,7 +60,10 @@ export async function POST(request: NextRequest) {
       number_of_awards = 0,
       scholarship_mode = 'single',
       tiers = [],
-      form_sections = []
+      form_sections = [],
+      budget_allocated = 0,
+      award_amount = 0,
+      budget_status = 'pending'
     } = await request.json();
 
     if (!title || !description || !deadline) {
@@ -95,11 +98,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Single mode: Award amount required
+    if (scholarship_mode === 'single' && (!award_amount || award_amount <= 0)) {
+      return NextResponse.json(
+        { error: 'Award amount per student is required for single scholarship mode' },
+        { status: 400 }
+      );
+    }
+
     if (scholarship_mode === 'tiered' && tiers.length === 0) {
       return NextResponse.json(
         { error: 'At least one tier is required for tiered scholarship mode' },
         { status: 400 }
       );
+    }
+
+    // Tiered mode: Check if all tiers have numeric amount
+    if (scholarship_mode === 'tiered') {
+      const missingAmount = tiers.some((t: any) => !t.award_amount_numeric || t.award_amount_numeric <= 0);
+      if (missingAmount) {
+        return NextResponse.json(
+          { error: 'All tiers must have a numeric award amount' },
+          { status: 400 }
+        );
+      }
     }
 
     const scholarshipData = {
@@ -112,7 +134,10 @@ export async function POST(request: NextRequest) {
       form_sections: form_sections,
       number_of_awards: scholarship_mode === 'single' ? number_of_awards : 0,
       scholarship_mode: scholarship_mode,
-      created_by: null
+      created_by: null,
+      budget_allocated: budget_allocated,
+      budget_required: 0,
+      budget_status: budget_status
     };
 
     const { data, error } = await supabase
@@ -137,6 +162,7 @@ export async function POST(request: NextRequest) {
         max_score: tier.max_score,
         award_description: tier.award_description,
         award_amount: tier.award_amount,
+        award_amount_numeric: tier.award_amount_numeric || 0,
         tier_order: index
       }));
 
@@ -225,7 +251,9 @@ export async function PUT(request: NextRequest) {
       number_of_awards,
       scholarship_mode,
       tiers,
-      form_sections
+      form_sections,
+      budget_allocated,
+      budget_status
     } = body;
 
     if (!id) {
@@ -242,6 +270,8 @@ export async function PUT(request: NextRequest) {
     if (scoring_criteria !== undefined) updateData.scoring_criteria = scoring_criteria;
     if (number_of_awards !== undefined) updateData.number_of_awards = number_of_awards;
     if (scholarship_mode !== undefined) updateData.scholarship_mode = scholarship_mode;
+    if (budget_allocated !== undefined) updateData.budget_allocated = budget_allocated;
+    if (budget_status !== undefined) updateData.budget_status = budget_status;
     
     // Always save form_sections
     updateData.form_sections = form_sections || [];
@@ -274,6 +304,7 @@ export async function PUT(request: NextRequest) {
         max_score: tier.max_score,
         award_description: tier.award_description,
         award_amount: tier.award_amount,
+        award_amount_numeric: tier.award_amount_numeric || 0,
         tier_order: index
       }));
 
