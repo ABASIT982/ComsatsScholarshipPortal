@@ -8,8 +8,10 @@ import {
   Clock,
   CheckCircle,
   XCircle,
-  DollarSign
+  DollarSign,
+  ArrowRight
 } from 'lucide-react'
+import Link from 'next/link'
 import { 
   BarChart, 
   Bar, 
@@ -31,21 +33,33 @@ interface DashboardStats {
   approvedApplications: number;
   pendingApplications: number;
   rejectedApplications: number;
-  selectedStudents: number;  // ✅ Added this
-  successRate: number;       // ✅ Must be number, not string
+  selectedStudents: number;
+  successRate: number;
   monthlyApplications: { month: string; applications: number; approved: number }[];
   scholarshipDistribution: { name: string; value: number; color: string }[];
   recentActivity: { time: string; action: string; user: string; }[];
   statusData: { status: string; count: number; color: string }[];
 }
 
+interface StatCardProps {
+  title: string
+  value: string
+  change: string
+  trend: 'up' | 'down'
+  icon: React.ReactNode
+  color: 'blue' | 'green' | 'purple' | 'amber'
+  href?: string
+}
+
 export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [budgetStats, setBudgetStats] = useState<any>(null);
   const [lastUpdated, setLastUpdated] = useState('');
 
   useEffect(() => {
     fetchDashboardData();
+    fetchBudgetData();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -54,7 +68,6 @@ export default function AdminDashboard() {
       const data = await response.json();
       
       if (data.success) {
-        // Transform API data to match your chart formats
         const transformedData = transformData(data);
         setStats(transformedData);
         setLastUpdated(new Date().toLocaleTimeString());
@@ -66,30 +79,33 @@ export default function AdminDashboard() {
     }
   };
 
-const transformData = (apiData: any): DashboardStats => {
-  // Monthly applications - REAL from API
-  const monthlyApplications = apiData.monthlyApplications || [];
+  const fetchBudgetData = async () => {
+    try {
+      const response = await fetch('/api/admin/budget/overview');
+      const data = await response.json();
+      if (data.stats) {
+        setBudgetStats(data.stats);
+      }
+    } catch (error) {
+      console.error('Error fetching budget:', error);
+    }
+  };
 
-  // Scholarship distribution - REAL from API
+const transformData = (apiData: any): DashboardStats => {
+  const monthlyApplications = apiData.monthlyApplications || [];
   const scholarshipDistribution = apiData.scholarshipDistribution || [
     { name: 'No Data', value: 1, color: '#94A3B8' }
   ];
-
-  // Status data
   const statusData = [
     { status: 'Pending', count: apiData.stats?.pendingApplications || 0, color: '#F59E0B' },
     { status: 'Approved', count: apiData.stats?.approvedApplications || 0, color: '#10B981' },
     { status: 'Rejected', count: apiData.stats?.rejectedApplications || 0, color: '#EF4444' },
   ];
-
-  // Recent activity from your applications
   const recentActivity = apiData.recentApplications?.map((app: any) => ({
     time: formatTimeAgo(app.created_at),
     action: `Application ${app.status}`,
     user: app.student_regno
   })) || [];
-
-  // Calculate success rate as number
   const totalApps = apiData.stats?.totalApplications || 0;
   const approvedApps = apiData.stats?.approvedApplications || 0;
   const successRate = totalApps > 0 ? Number(((approvedApps / totalApps) * 100).toFixed(1)) : 0;
@@ -130,7 +146,6 @@ const transformData = (apiData: any): DashboardStats => {
     );
   }
 
-  // Safe access with default values
   const safeStats = stats || {
     totalStudents: 0,
     activeScholarships: 0,
@@ -160,7 +175,7 @@ const transformData = (apiData: any): DashboardStats => {
         </div>
       </div>
 
-      {/* Stats Grid - NOW DYNAMIC */}
+      {/* Stats Grid - 4 Cards including Budget */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Students"
@@ -169,6 +184,7 @@ const transformData = (apiData: any): DashboardStats => {
           trend="up"
           icon={<Users className="w-6 h-6" />}
           color="blue"
+          href="/admin/students"
         />
         <StatCard
           title="Active Scholarships"
@@ -177,6 +193,7 @@ const transformData = (apiData: any): DashboardStats => {
           trend="up"
           icon={<Award className="w-6 h-6" />}
           color="green"
+          href="/admin/scholarships"
         />
         <StatCard
           title="Applications"
@@ -185,14 +202,16 @@ const transformData = (apiData: any): DashboardStats => {
           trend="up"
           icon={<FileText className="w-6 h-6" />}
           color="purple"
+          href="/admin/applications"
         />
         <StatCard
-          title="Success Rate"
-          value={`${safeStats.successRate}%`}
-          change={`+${safeStats.approvedApplications} approved`}
+          title="Budget Overview"
+          value={`Rs. ${budgetStats?.totalBudget?.toLocaleString() || 0}`}
+          change={`${budgetStats?.totalBudget > 0 ? Math.round((budgetStats.approvedBudget / budgetStats.totalBudget) * 100) : 0}% utilized`}
           trend="up"
-          icon={<TrendingUp className="w-6 h-6" />}
-          color="amber"
+          icon={<DollarSign className="w-6 h-6" />}
+          color="blue"
+          href="/admin/budget/overview"
         />
       </div>
 
@@ -276,30 +295,50 @@ const transformData = (apiData: any): DashboardStats => {
           </div>
         </div>
 
-        {/* Quick Stats */}
+        {/* Quick Stats - CLICKABLE */}
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Quick Stats</h3>
           <div className="space-y-4">
-            <StatItem 
-              icon={<CheckCircle className="w-5 h-5 text-green-500" />} 
-              label="Approved" 
-              value={safeStats.approvedApplications.toString()} 
-            />
-            <StatItem 
-              icon={<Clock className="w-5 h-5 text-amber-500" />} 
-              label="Pending" 
-              value={safeStats.pendingApplications.toString()} 
-            />
-            <StatItem 
-              icon={<XCircle className="w-5 h-5 text-red-500" />} 
-              label="Rejected" 
-              value={safeStats.rejectedApplications.toString()} 
-            />
-            <StatItem 
-              icon={<Award className="w-5 h-5 text-blue-500" />} 
-              label="Selected" 
-              value={safeStats.selectedStudents.toString()} 
-            />
+            <Link
+              href="/admin/applications?status=approved"
+              className="flex items-center justify-between py-2 hover:bg-gray-50 px-2 rounded-lg cursor-pointer transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                <span className="text-sm text-gray-600">Approved</span>
+              </div>
+              <span className="font-semibold text-gray-900">{safeStats.approvedApplications}</span>
+            </Link>
+            <Link
+              href="/admin/applications?status=pending"
+              className="flex items-center justify-between py-2 hover:bg-gray-50 px-2 rounded-lg cursor-pointer transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Clock className="w-5 h-5 text-amber-500" />
+                <span className="text-sm text-gray-600">Pending</span>
+              </div>
+              <span className="font-semibold text-gray-900">{safeStats.pendingApplications}</span>
+            </Link>
+            <Link
+              href="/admin/applications?status=rejected"
+              className="flex items-center justify-between py-2 hover:bg-gray-50 px-2 rounded-lg cursor-pointer transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <XCircle className="w-5 h-5 text-red-500" />
+                <span className="text-sm text-gray-600">Rejected</span>
+              </div>
+              <span className="font-semibold text-gray-900">{safeStats.rejectedApplications}</span>
+            </Link>
+            <Link
+              href="/admin/merit/lists"
+              className="flex items-center justify-between py-2 hover:bg-gray-50 px-2 rounded-lg cursor-pointer transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <Award className="w-5 h-5 text-blue-500" />
+                <span className="text-sm text-gray-600">Selected</span>
+              </div>
+              <span className="font-semibold text-gray-900">{safeStats.selectedStudents}</span>
+            </Link>
           </div>
         </div>
 
@@ -322,18 +361,9 @@ const transformData = (apiData: any): DashboardStats => {
   )
 }
 
-// Keep your existing StatCard, StatItem, and ActivityItem components exactly as they are
-// (Copy them from your original code below this line)
-interface StatCardProps {
-  title: string
-  value: string
-  change: string
-  trend: 'up' | 'down'
-  icon: React.ReactNode
-  color: 'blue' | 'green' | 'purple' | 'amber'
-}
+// ============ COMPONENTS ============
 
-function StatCard({ title, value, change, trend, icon, color }: StatCardProps) {
+function StatCard({ title, value, change, trend, icon, color, href }: StatCardProps) {
   const colorClasses = {
     blue: 'bg-blue-50 text-blue-600 border-blue-200',
     green: 'bg-green-50 text-green-600 border-green-200',
@@ -341,32 +371,32 @@ function StatCard({ title, value, change, trend, icon, color }: StatCardProps) {
     amber: 'bg-amber-50 text-amber-600 border-amber-200'
   }
 
-  return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
-          <p className={`text-sm mt-1 ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-            {change} from last month
-          </p>
-        </div>
-        <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
-          {icon}
-        </div>
+  const CardContent = () => (
+    <div className="flex items-center justify-between">
+      <div>
+        <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
+        <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <p className={`text-sm mt-1 ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+          {change}
+        </p>
+      </div>
+      <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
+        {icon}
       </div>
     </div>
   )
-}
 
-function StatItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  if (href) {
+    return (
+      <Link href={href} className="block bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200 cursor-pointer hover:border-blue-300">
+        <CardContent />
+      </Link>
+    )
+  }
+
   return (
-    <div className="flex items-center justify-between py-2">
-      <div className="flex items-center gap-3">
-        {icon}
-        <span className="text-sm text-gray-600">{label}</span>
-      </div>
-      <span className="font-semibold text-gray-900">{value}</span>
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200">
+      <CardContent />
     </div>
   )
 }

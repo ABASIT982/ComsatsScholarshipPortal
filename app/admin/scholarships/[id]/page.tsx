@@ -16,7 +16,6 @@ type CustomField = {
 type FormSection = {
   id: string;
   title: string;
-  icon: string;
   fields: CustomField[];
 };
 
@@ -35,7 +34,7 @@ type Tier = {
   max_score: number;
   award_description: string;
   award_amount: string;
-  award_amount_numeric?: number;  // ADDED
+  award_amount_numeric?: number;
 };
 
 type FormFieldOption = {
@@ -43,8 +42,6 @@ type FormFieldOption = {
   label: string;
   type: string;
 };
-
-const ICON_OPTIONS = ['👤', '📚', '📄', '🏠', '🎓', '📝', '📷', '⚙️', '❤️', '⭐', '💰', '🏆', '📞', '✉️'];
 
 export default function EditScholarshipPage() {
   const params = useParams();
@@ -66,7 +63,6 @@ export default function EditScholarshipPage() {
     scholarship_mode: 'single'
   });
 
-  // ADDED: Budget state
   const [budgetData, setBudgetData] = useState({
     award_amount: 0,
   });
@@ -91,7 +87,7 @@ const fetchScholarship = async () => {
   try {
     console.log('🔄 Fetching scholarship:', scholarshipId);
     
-    const response = await fetch(`/api/scholarships/${scholarshipId}`);
+    const response = await fetch(`/api/scholarships/${scholarshipId}?_=${Date.now()}`);
     const data = await response.json();
 
     console.log('📦 Full API response:', data);
@@ -121,12 +117,15 @@ const fetchScholarship = async () => {
       // Load sections
       let loadedSections: FormSection[] = [];
       if (data.scholarship.form_sections && Array.isArray(data.scholarship.form_sections) && data.scholarship.form_sections.length > 0) {
-        loadedSections = data.scholarship.form_sections;
+        loadedSections = data.scholarship.form_sections.map((section: any) => ({
+          id: section.id,
+          title: section.title,
+          fields: section.fields || []
+        }));
       } else {
         loadedSections = [{
           id: 'section_1',
           title: 'Form Fields',
-          icon: '📄',
           fields: []
         }];
       }
@@ -175,7 +174,6 @@ const fetchScholarship = async () => {
     setSections(prev => [...prev, {
       id: `section_${Date.now()}`,
       title: `Section ${prev.length + 1}`,
-      icon: '📄',
       fields: []
     }]);
     toast.success('New section added!');
@@ -187,18 +185,12 @@ const fetchScholarship = async () => {
     setSections(updated);
   };
 
-  const updateSectionIcon = (index: number, icon: string): void => {
-    const updated = [...sections];
-    updated[index].icon = icon;
-    setSections(updated);
-  };
-
   const removeSection = (index: number): void => {
     if (sections.length <= 1) {
       toast.error('At least one section is required');
       return;
     }
-    setSections(prev => prev.filter((_: FormSection, i: number) => i !== index));
+    setSections(prev => prev.filter((_, i) => i !== index));
   };
 
   const moveSectionUp = (index: number): void => {
@@ -257,7 +249,7 @@ const fetchScholarship = async () => {
 
   const removeFieldFromSection = (sectionIndex: number, fieldIndex: number): void => {
     const updated = [...sections];
-    updated[sectionIndex].fields = updated[sectionIndex].fields.filter((_: CustomField, i: number) => i !== fieldIndex);
+    updated[sectionIndex].fields = updated[sectionIndex].fields.filter((_, i) => i !== fieldIndex);
     setSections(updated);
   };
 
@@ -308,7 +300,7 @@ const fetchScholarship = async () => {
   };
 
   const removeCriterion = (index: number): void => {
-    setScoringCriteria(prev => prev.filter((_: ScoringCriterion, i: number) => i !== index));
+    setScoringCriteria(prev => prev.filter((_, i) => i !== index));
   };
 
   // ========== TIER FUNCTIONS ==========
@@ -321,7 +313,7 @@ const fetchScholarship = async () => {
       max_score: 100,
       award_description: '',
       award_amount: '',
-      award_amount_numeric: 0  // ADDED
+      award_amount_numeric: 0
     }]);
   };
 
@@ -332,7 +324,7 @@ const fetchScholarship = async () => {
   };
 
   const removeTier = (index: number): void => {
-    setTiers(prev => prev.filter((_: Tier, i: number) => i !== index));
+    setTiers(prev => prev.filter((_, i) => i !== index));
   };
 
   // ========== FORM HANDLERS ==========
@@ -435,7 +427,6 @@ const fetchScholarship = async () => {
     const formattedSections = sections.map((section: FormSection) => ({
       id: section.id,
       title: section.title,
-      icon: section.icon,
       fields: section.fields.map((field: CustomField) => ({
         type: field.type,
         label: field.label,
@@ -610,7 +601,6 @@ const fetchScholarship = async () => {
                       required
                     />
                   </div>
-                  {/* ADDED: Award Amount per Student */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Award Amount per Student *
@@ -707,15 +697,6 @@ const fetchScholarship = async () => {
                 {sections.map((section: FormSection, sectionIndex: number) => (
                   <div key={section.id} className="border border-gray-200 rounded-lg p-4 mb-4 bg-gray-50">
                     <div className="flex items-center gap-3 mb-3">
-                      <select
-                        value={section.icon}
-                        onChange={(e) => updateSectionIcon(sectionIndex, e.target.value)}
-                        className="w-14 px-2 py-2 border rounded text-center text-xl"
-                      >
-                        {ICON_OPTIONS.map((icon: string) => (
-                          <option key={icon} value={icon}>{icon}</option>
-                        ))}
-                      </select>
                       <input
                         type="text"
                         value={section.title}
@@ -1061,7 +1042,6 @@ const fetchScholarship = async () => {
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
                               />
                             </div>
-                            {/* ADDED: Numeric Amount */}
                             <div>
                               <label className="block text-xs font-medium text-gray-700 mb-1">Amount (Numeric)</label>
                               <input

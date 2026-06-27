@@ -160,8 +160,9 @@ export async function PUT(
       number_of_awards,
       scholarship_mode,
       tiers,
-      budget_allocated,     // ADDED
-      budget_status         // ADDED
+      budget_allocated,
+      budget_status,
+      form_sections = []   // ← ADDED
     } = await request.json();
 
     console.log('✏️ [API] Updating scholarship:', id);
@@ -195,8 +196,9 @@ export async function PUT(
       number_of_awards: number_of_awards || 0,
       scholarship_mode: scholarship_mode || 'single',
       updated_at: new Date().toISOString(),
-      budget_allocated: budget_allocated || 0,     // ADDED
-      budget_status: budget_status || 'pending'    // ADDED
+      budget_allocated: budget_allocated || 0,
+      budget_status: budget_status || 'pending',
+      form_sections: form_sections || []   // ← ADDED
     };
 
     const { data: scholarship, error } = await supabase
@@ -270,7 +272,7 @@ export async function PUT(
         max_score: tier.max_score,
         award_description: tier.award_description,
         award_amount: tier.award_amount,
-        award_amount_numeric: tier.award_amount_numeric || 0,  // ADDED
+        award_amount_numeric: tier.award_amount_numeric || 0,
         tier_order: index
       }));
 
@@ -289,11 +291,18 @@ export async function PUT(
         .eq('scholarship_id', id);
     }
 
-    console.log('✅ [API] Scholarship updated with criteria:', scholarship.scoring_criteria);
+    // Return updated scholarship with tiers
+    const { data: updatedScholarship } = await supabase
+      .from('scholarships')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    console.log('✅ [API] Scholarship updated successfully');
 
     return NextResponse.json({
       success: true,
-      scholarship,
+      scholarship: updatedScholarship,
       message: 'Scholarship updated successfully'
     });
 

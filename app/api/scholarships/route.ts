@@ -318,8 +318,15 @@ export async function PUT(request: NextRequest) {
         .eq('scholarship_id', id);
     }
 
+    // Return updated scholarship with tiers
+    const { data: updatedScholarship } = await supabase
+      .from('scholarships')
+      .select('*')
+      .eq('id', id)
+      .single();
+
     return NextResponse.json({ 
-      scholarship: data, 
+      scholarship: updatedScholarship, 
       message: 'Scholarship updated successfully' 
     });
 

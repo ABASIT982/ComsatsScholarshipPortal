@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../app/contexts/AuthContext'
 import NotificationBell from '@/components/NotificationBell';
+import Link from 'next/link'
 
 export function AdminHeader() {
   const [showUserMenu, setShowUserMenu] = useState(false)
@@ -67,10 +68,13 @@ const getAdminId = () => {
                 </div>
                 
                 <div className="py-1">
-                  <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200">
-                    <Settings className="w-4 h-4" />
-                    Account Settings
-                  </button>
+<Link
+  href="/admin/settings"
+  className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200"
+>
+  <Settings className="w-4 h-4" />
+  Account Settings
+</Link>
                   
                   <button 
                     onClick={handleSignOut}

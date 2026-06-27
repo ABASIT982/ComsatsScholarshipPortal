@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../../app/contexts/AuthContext'
 import NotificationBell from '@/components/NotificationBell';
+import Link from 'next/link'
 
 
 export function StudentHeader() {
@@ -63,11 +64,11 @@ export function StudentHeader() {
         {/* Right Section */}
         <div className="flex items-center gap-2 lg:gap-4 flex-shrink-0">
           {/* Notifications */}
-{/* Notifications */}
-<div className="flex items-center gap-4">
-  <NotificationBell userId={currentRegno} userType="student" />
-  {/* other nav items */}
-</div>
+          {/* Notifications */}
+          <div className="flex items-center gap-4">
+            <NotificationBell userId={currentRegno} userType="student" />
+            {/* other nav items */}
+          </div>
 
           {/* User Profile with Dropdown */}
           <div className="relative">
@@ -132,10 +133,13 @@ export function StudentHeader() {
                     <User className="w-4 h-4" />
                     My Profile
                   </button>
-                  <button className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200">
+                  <Link
+                    href="/student/settings"
+                    className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-blue-50 hover:text-blue-700 transition-colors duration-200"
+                  >
                     <Settings className="w-4 h-4" />
                     Settings
-                  </button>
+                  </Link>
                   <button
                     onClick={handleSignOut}
                     className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200 rounded-b-xl"
