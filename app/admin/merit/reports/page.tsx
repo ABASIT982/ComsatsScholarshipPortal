@@ -764,9 +764,10 @@ export default function MeritReportsPage() {
                           </>
                         )}
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-1 text-xs rounded-full ${entry.status === 'selected' || entry.status === 'awarded' ? 'bg-green-100 text-green-800' :
-                              entry.status === 'waitlist' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
+                          <span className={`px-2 py-1 text-xs rounded-full ${entry.status === 'awarded' ? 'bg-purple-100 text-purple-800' :
+                              entry.status === 'selected' ? 'bg-green-100 text-green-800' :
+                                entry.status === 'waitlist' ? 'bg-yellow-100 text-yellow-800' :
+                                  'bg-gray-100 text-gray-800'
                             }`}>
                             {entry.status}
                           </span>

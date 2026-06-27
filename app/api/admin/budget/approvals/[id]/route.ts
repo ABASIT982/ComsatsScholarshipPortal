@@ -45,9 +45,9 @@ export async function PUT(
 
     // ============ APPROVE ============
     if (action === 'approve') {
-      // ✅ FIX: Use budget_allocated if available, otherwise use budget_required
       const amountToApprove = scholarship.budget_allocated || scholarship.budget_required || 0
       
+      // Update scholarship
       const { error: updateError } = await supabase
         .from('scholarships')
         .update({
@@ -64,6 +64,23 @@ export async function PUT(
           { error: updateError.message || 'Failed to approve budget' },
           { status: 500 }
         )
+      }
+
+      // ✅ INSERT INTO budget_approvals TABLE
+      const { error: approvalError } = await supabase
+        .from('budget_approvals')
+        .insert({
+          scholarship_id: id,
+          total_required: scholarship.budget_required || 0,
+          approved_amount: amountToApprove,
+          status: 'approved',
+          approved_date: new Date().toISOString(),
+          notes: 'Budget approved by admin',
+          created_at: new Date().toISOString()
+        })
+
+      if (approvalError) {
+        console.error('❌ Error saving budget approval:', approvalError)
       }
 
       console.log('✅ Budget approved for:', scholarship.title)
@@ -136,6 +153,7 @@ export async function PUT(
 
       console.log('📌 [Budget Adjust] New Amount:', adjustedAmount)
 
+      // Update scholarship with new budget
       const { error: updateError } = await supabase
         .from('scholarships')
         .update({
@@ -152,6 +170,23 @@ export async function PUT(
           { error: updateError.message || 'Failed to adjust budget' },
           { status: 500 }
         )
+      }
+
+      // ✅ INSERT INTO budget_approvals TABLE
+      const { error: approvalError } = await supabase
+        .from('budget_approvals')
+        .insert({
+          scholarship_id: id,
+          total_required: adjustedAmount,
+          approved_amount: adjustedAmount,
+          status: 'adjusted',
+          approved_date: new Date().toISOString(),
+          notes: `Budget adjusted from ${scholarship.budget_required || 0} to ${adjustedAmount}`,
+          created_at: new Date().toISOString()
+        })
+
+      if (approvalError) {
+        console.error('❌ Error saving budget approval:', approvalError)
       }
 
       console.log('✅ Budget adjusted for:', scholarship.title)
@@ -178,6 +213,23 @@ export async function PUT(
           { error: updateError.message || 'Failed to reject budget' },
           { status: 500 }
         )
+      }
+
+      // ✅ INSERT INTO budget_approvals TABLE
+      const { error: approvalError } = await supabase
+        .from('budget_approvals')
+        .insert({
+          scholarship_id: id,
+          total_required: scholarship.budget_required || 0,
+          approved_amount: 0,
+          status: 'rejected',
+          approved_date: new Date().toISOString(),
+          notes: 'Budget rejected by admin',
+          created_at: new Date().toISOString()
+        })
+
+      if (approvalError) {
+        console.error('❌ Error saving budget approval:', approvalError)
       }
 
       const { data: meritEntries } = await supabase

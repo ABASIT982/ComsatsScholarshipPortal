@@ -9,7 +9,7 @@ interface Application {
   id: string;
   scholarship_id: string;
   student_regno: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'awarded';
   applied_at: string;
   notes?: string;
   application_data?: any;
@@ -68,12 +68,12 @@ export default function ApplicationDetailsPage() {
     if (!application?.application_data) return null;
 
     const appData = application.application_data;
-    
+
     const excludedKeys = [
-      'student_name', 
-      'student_email', 
-      'student_level', 
-      'applied_at', 
+      'student_name',
+      'student_email',
+      'student_level',
+      'applied_at',
       'scholarship_title',
       'student_type',
       'scholarship_template',
@@ -97,7 +97,7 @@ export default function ApplicationDetailsPage() {
 
   const renderDocuments = () => {
     const documents = application?.application_data?.documents;
-    
+
     console.log('📄 Documents data for admin:', documents);
 
     if (!documents || Object.keys(documents).length === 0) {
@@ -116,7 +116,7 @@ export default function ApplicationDetailsPage() {
             <h4 className="font-semibold text-gray-800 mb-4 capitalize text-lg">
               {fieldName.replace(/_/g, ' ')} Documents
             </h4>
-            
+
             <div className="space-y-3">
               {(files as any[]).map((file: any, index: number) => (
                 <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border">
@@ -136,20 +136,20 @@ export default function ApplicationDetailsPage() {
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex gap-2 flex-shrink-0">
                     {file.url ? (
                       <>
-                        <a 
-                          href={file.url} 
-                          target="_blank" 
+                        <a
+                          href={file.url}
+                          target="_blank"
                           rel="noopener noreferrer"
                           className="bg-blue-600 text-white px-3 py-2 rounded text-sm hover:bg-blue-700 transition-colors"
                         >
                           View
                         </a>
-                        <a 
-                          href={file.url} 
+                        <a
+                          href={file.url}
                           download={file.name}
                           className="bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700 transition-colors"
                         >
@@ -216,10 +216,10 @@ export default function ApplicationDetailsPage() {
               <div>
                 <h1 className="text-2xl font-bold mb-2">Application Details</h1>
                 <div className="flex items-center gap-4 flex-wrap">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                    application.status === 'approved' ? 'bg-green-500' :
-                    application.status === 'rejected' ? 'bg-red-500' : 'bg-yellow-500'
-                  }`}>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${application.status === 'approved' ? 'bg-green-500' :
+                    application.status === 'awarded' ? 'bg-purple-500' :
+                      application.status === 'rejected' ? 'bg-red-500' : 'bg-yellow-500'
+                    }`}>
                     {application.status.toUpperCase()}
                   </span>
                   <span className="text-blue-100">
@@ -240,11 +240,10 @@ export default function ApplicationDetailsPage() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm capitalize ${
-                    activeTab === tab
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className={`py-4 px-1 border-b-2 font-medium text-sm capitalize ${activeTab === tab
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
                 >
                   {tab === 'personal' && 'Student Info'}
                   {tab === 'application' && 'Application Data'}
@@ -273,7 +272,7 @@ export default function ApplicationDetailsPage() {
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
                       <BookOpen className="w-4 h-4 text-blue-600" />
                       <div>
@@ -309,10 +308,10 @@ export default function ApplicationDetailsPage() {
 
                     <div className="p-4 bg-gray-50 rounded-lg border">
                       <label className="text-sm text-gray-600 block">Application Status</label>
-                      <p className={`font-medium text-lg ${
-                        application.status === 'approved' ? 'text-green-600' :
-                        application.status === 'rejected' ? 'text-red-600' : 'text-yellow-600'
-                      }`}>
+                      <p className={`font-medium text-lg ${application.status === 'approved' ? 'text-green-600' :
+                          application.status === 'awarded' ? 'text-purple-600' :
+                            application.status === 'rejected' ? 'text-red-600' : 'text-yellow-600'
+                        }`}>
                         {application.status.toUpperCase()}
                       </p>
                     </div>
@@ -355,7 +354,7 @@ export default function ApplicationDetailsPage() {
                   <div className="bg-white border border-gray-200 rounded-lg divide-y">
                     {renderFormData()}
                   </div>
-                  
+
                   {!renderFormData() && (
                     <div className="text-center py-8 text-gray-500">
                       No additional form data provided.
@@ -390,7 +389,7 @@ export default function ApplicationDetailsPage() {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ status: 'approved' })
                         });
-                        
+
                         if (response.ok) {
                           setApplication(prev => prev ? { ...prev, status: 'approved' } : null);
                           toast.success('Application approved', {
@@ -436,7 +435,7 @@ export default function ApplicationDetailsPage() {
                           headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ status: 'rejected' })
                         });
-                        
+
                         if (response.ok) {
                           setApplication(prev => prev ? { ...prev, status: 'rejected' } : null);
                           toast.success('Application rejected', {

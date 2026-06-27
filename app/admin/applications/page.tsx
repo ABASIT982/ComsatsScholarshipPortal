@@ -1,13 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { CheckCircle, XCircle, Clock, Search, Eye, FileText } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Search, Eye, FileText, Award } from 'lucide-react';
 import Link from 'next/link';
 
 interface Application {
   id: string;
   scholarship_id: string;
   student_regno: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'awarded';
   applied_at: string;
   notes?: string;
   application_data?: any;
@@ -23,7 +23,6 @@ export default function AdminApplicationsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  //-------------------------------------This is for Fetch real applications from API------------------------------------
   useEffect(() => {
     fetchApplications();
   }, []);
@@ -43,7 +42,6 @@ export default function AdminApplicationsPage() {
       setApplications(data.applications || []);
     } catch (error) {
       console.error('❌ Error fetching applications:', error);
-      //------------------------This is for Fallback to localStorage data if API fails------------------------------------
       const fallbackData = getFallbackApplications();
       setApplications(fallbackData);
     } finally {
@@ -51,10 +49,8 @@ export default function AdminApplicationsPage() {
     }
   };
 
-  //-----------------------------This is for Fallback function to get applications from localStorage---------------------------
   const getFallbackApplications = (): Application[] => {
     try {
-      //-------------------------This is for Get all student application keys from localStorage-----------------------------
       const allKeys = Object.keys(localStorage);
       const applicationKeys = allKeys.filter(key => key.startsWith('appliedScholarships_'));
       
@@ -99,6 +95,8 @@ export default function AdminApplicationsPage() {
     switch (status) {
       case 'approved':
         return <CheckCircle className="w-5 h-5 text-green-500" />;
+      case 'awarded':
+        return <Award className="w-5 h-5 text-purple-500" />;
       case 'rejected':
         return <XCircle className="w-5 h-5 text-red-500" />;
       default:
@@ -110,6 +108,8 @@ export default function AdminApplicationsPage() {
     switch (status) {
       case 'approved':
         return 'bg-green-100 text-green-800';
+      case 'awarded':
+        return 'bg-purple-100 text-purple-800';
       case 'rejected':
         return 'bg-red-100 text-red-800';
       default:
@@ -140,14 +140,14 @@ export default function AdminApplicationsPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-6xl mx-auto">
-        {/*--------------------------This is for Header ----------------------------------*/}
+        {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Scholarship Applications</h1>
           <p className="text-gray-600 mt-2">Review and manage all scholarship applications</p>
         </div>
 
-        {/*------------------------------This is for Statistics Cards --------------------------------*/}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
               <div className="bg-blue-100 p-3 rounded-lg">
@@ -155,7 +155,7 @@ export default function AdminApplicationsPage() {
               </div>
               <div>
                 <div className="text-2xl font-bold text-gray-900">{applications.length}</div>
-                <div className="text-sm text-gray-600">Total Applications</div>
+                <div className="text-sm text-gray-600">Total</div>
               </div>
             </div>
           </div>
@@ -187,6 +187,21 @@ export default function AdminApplicationsPage() {
               </div>
             </div>
           </div>
+
+          {/* NEW: Awarded Card */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-4">
+              <div className="bg-purple-100 p-3 rounded-lg">
+                <Award className="w-6 h-6 text-purple-600" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {applications.filter(app => app.status === 'awarded').length}
+                </div>
+                <div className="text-sm text-gray-600">Awarded</div>
+              </div>
+            </div>
+          </div>
           
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
             <div className="flex items-center gap-4">
@@ -203,10 +218,9 @@ export default function AdminApplicationsPage() {
           </div>
         </div>
 
-        {/*-------------------------------------This is for Search and Filters ------------------------------------------*/}
+        {/* Search and Filters */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
-            {/*-------------------------------This is for Search --------------------------------------*/}
             <div className="flex-1">
               <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -220,7 +234,6 @@ export default function AdminApplicationsPage() {
               </div>
             </div>
             
-            {/*----------------------------------This is for Status Filter -----------------------------------------*/}
             <div className="flex gap-2 items-center">
               <select
                 value={statusFilter}
@@ -230,11 +243,11 @@ export default function AdminApplicationsPage() {
                 <option value="all">All Status</option>
                 <option value="pending">Pending</option>
                 <option value="approved">Approved</option>
+                <option value="awarded">Awarded</option>
                 <option value="rejected">Rejected</option>
               </select>
             </div>
             
-            {/*-----------------------------This is for Refresh Button ---------------------------*/}
             <button
               onClick={fetchApplications}
               className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
@@ -244,13 +257,13 @@ export default function AdminApplicationsPage() {
           </div>
         </div>
 
-        {/*----------------------------This is for Applications Table ----------------------------*/}
+        {/* Applications Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gradient-to-r from-blue-600 to-blue-700">
                 <tr>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider rounded-tl-lg">
                     Student
                   </th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider">
@@ -262,7 +275,7 @@ export default function AdminApplicationsPage() {
                   <th className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider">
                     Status
                   </th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider">
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-white uppercase tracking-wider rounded-tr-lg">
                     Actions
                   </th>
                 </tr>
