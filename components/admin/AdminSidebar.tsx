@@ -13,6 +13,8 @@ import {
   Menu,
   X,
   Archive,
+  Shield,
+  HelpCircle,
   LogOut,
   ChevronDown,
   ChevronRight,
@@ -82,6 +84,15 @@ const menuItems: (MenuItem | MenuItemWithSubmenu)[] = [
   { name: 'Notifications', href: '/admin/notifications', icon: Bell },
   { name: 'Reports', href: '/admin/reports', icon: FileText },
   { name: 'Manage Disputes', href: '/admin/disputes', icon: AlertCircle },  
+  { 
+  name: 'Help Center', 
+  icon: HelpCircle,
+  submenu: [
+    { name: 'FAQs', href: '/admin/help/faqs', icon: HelpCircle },
+    { name: 'Guidelines', href: '/admin/help/guidelines', icon: FileText },
+    { name: 'Policies', href: '/admin/help/policies', icon: Shield },
+  ]
+},
 ]
 
 export function AdminSidebar() {
